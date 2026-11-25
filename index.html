@@ -81,6 +81,7 @@
   #invui .bar{height:6px;border-radius:3px;background:rgba(255,255,255,.15);margin:5px 0 4px;overflow:hidden}
   #invui .bar i{display:block;height:100%}
   #invui .st{font-size:11px;opacity:.8}
+  #invui .sk{font-size:11px;color:#ffd35a;margin-top:3px}
   #invui .tabs7{display:flex;flex-direction:column;gap:6px}
   #invui .tbl{display:flex;gap:10px;align-items:center;padding:7px;border-radius:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1)}
   #invui .tic{width:34px;height:34px;border-radius:8px;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center}
@@ -194,7 +195,7 @@ void main(){vec4 w=uM*vec4(aP,1.0);vW=w.xyz;vN=(uM*vec4(aN,0.0)).xyz;vC=aC.rgb;v
 const FS=`#extension GL_OES_standard_derivatives : enable
 `+HP+`varying vec3 vW;varying vec3 vN;varying vec3 vC;varying float vMat;varying vec4 vL;
 uniform vec3 uL;uniform vec3 uSky;uniform vec3 uGnd;uniform vec3 uSun;uniform vec3 uFog;uniform vec3 uEye;uniform vec3 uTgt;uniform vec3 uPl;uniform vec3 uTint;
-uniform float uAmb;uniform float uTorch;uniform float uTime;uniform float uA;uniform float uShOn;uniform float uSMs;uniform sampler2D uSM;
+uniform vec3 uL2p;uniform vec3 uL2c;uniform float uAmb;uniform float uTorch;uniform float uTime;uniform float uA;uniform float uShOn;uniform float uSMs;uniform sampler2D uSM;
 uniform sampler2D uGD;uniform vec2 uMS;uniform sampler2D uRT;uniform sampler2D uCov;
 vec4 rp(float r,float row){return texture2D(uRT,vec2((r+0.5)/9.0,(row+0.5)/8.0));}
 float regAt(vec2 c){return c.y==1.0?3.0+(2.0-c.x):c.y*3.0+c.x;}
@@ -278,7 +279,7 @@ void main(){vec3 n=normalize(vN);vec3 col=vC*uTint;float m=vMat;
  vec3 amb=mix(uGnd,uSky,n.y*0.5+0.5)*uAmb;
  vec3 li=amb+uSun*nl*sh;
  if(m>4.5){float tn=smoothstep(0.12,0.24,nl*sh);li=amb*1.0+uSun*(0.3+0.5*tn);}
- float pd=length(vW.xz-uPl.xz);li+=vec3(1.0,0.75,0.45)*uTorch*max(0.0,1.0-pd/7.5);
+ float pd=length(vW.xz-uPl.xz);li+=vec3(1.0,0.75,0.45)*uTorch*max(0.0,1.0-pd/7.5);li+=uL2c*pow(max(0.0,1.0-length(vW-uL2p)/2.8),1.5);
  vec3 c=col*li;
  vec3 v=normalize(uEye-vW);
  if(m>3.5&&m<4.5){vec3 h=normalize(uL+v);float fr=0.04+0.5*pow(1.0-max(dot(n,v),0.0),4.0);c=mix(c,uSky*0.85,fr);c+=uSun*pow(max(dot(n,h),0.0),120.0)*0.9*sh;c=mix(c,vec3(0.92,0.94,0.9)*(uAmb+uSun*0.6),foam*0.45);}
@@ -294,7 +295,7 @@ function program(vs,fs,unis){const p=gl.createProgram();gl.attachShader(p,sh(gl.
  gl.bindAttribLocation(p,0,"aP");gl.bindAttribLocation(p,1,"aN");gl.bindAttribLocation(p,2,"aC");gl.linkProgram(p);if(!gl.getProgramParameter(p,gl.LINK_STATUS))throw new Error(gl.getProgramInfoLog(p));
  const u={};for(const n of unis)u[n]=gl.getUniformLocation(p,n);return{p,u};}
 gl.getExtension("OES_standard_derivatives");
-const MAIN=program(VS,FS,["uVP","uM","uLVP","uL","uSky","uGnd","uSun","uFog","uEye","uTgt","uPl","uTint","uAmb","uTorch","uTime","uA","uShOn","uSMs","uSM","uGD","uMS","uRT","uCov"]);
+const MAIN=program(VS,FS,["uVP","uM","uLVP","uL","uSky","uGnd","uSun","uFog","uEye","uTgt","uPl","uTint","uAmb","uTorch","uTime","uA","uShOn","uSMs","uSM","uGD","uMS","uRT","uCov","uL2p","uL2c"]);
 const DEPTH=program(DVS,DFS,["uLVP","uM"]);
 const OVS=`attribute vec3 aP;attribute vec3 aN;uniform mat4 uVP;uniform mat4 uM;uniform vec3 uEye;uniform float uW;
 void main(){vec4 w=uM*vec4(aP,1.0);vec3 n=normalize((uM*vec4(aN,0.0)).xyz);vec3 p=w.xyz+n*uW;p+=normalize(p-uEye)*uW*2.2;gl_Position=uVP*vec4(p,1.0);}`;
@@ -711,13 +712,14 @@ function characterParts(){
   out.push([PT.foot,M4.chain(sm,M4.T(0,-SH,0),M4.Rx(thigh-knee))]);}
  const torso=M4.chain(pelvis,M4.T(0,0.16,0),M4.Ry(-Math.sin(ph)*0.12*amt*(P.atk>0?0.3:1)+SP.tw),M4.Rx(0.06*amt),M4.S(1,breathe,1));out.push([PT.torso,torso]);
  const G=[-0.28+SP.gx,0.04+SP.gy+(P.atk>0?0:Math.sin(ph)*0.04*amt),0.16+SP.gz+(P.atk>0?0:Math.sin(ph)*0.05*amt)];
+ if(EQ==="bow")bowParts(out,torso,amt,ph);else{
  for(const side of[1,-1]){if(side<0){// clay arm reaches for the staff grip
    const sh=[-0.225,0.33,0],v=[G[0]-sh[0],G[1]-sh[1],G[2]-sh[2]],L=Math.hypot(v[0],v[1],v[2]),reach=UA+FA+0.05,bend=Math.acos(Math.min(1,L/reach))*1.4;
    const um=M4.chain(torso,M4.T(sh[0],sh[1],sh[2]),aimDown(v),M4.Rx(bend*0.5));out.push([PT.upperArm,um]);out.push([PT.lowerR,M4.chain(um,M4.T(0,-UA,0),M4.Rx(-bend))]);continue;}
   const p=ph+Math.PI;const sw=Math.sin(p)*0.5*amt;const elbow=0.2+Math.max(0,Math.sin(p))*0.35*amt;
   const um=M4.chain(torso,M4.T(side*0.225,0.33,0),M4.Rz(side*0.12),M4.Rx(-sw));out.push([PT.upperArm,um]);
   out.push([PT.lowerL,M4.chain(um,M4.T(0,-UA,0),M4.Rx(-elbow))]);}
- out.push([WMODELS[EQ][WEAP.tier],M4.chain(torso,M4.T(G[0],G[1],G[2]),M4.Ry(SP.ry),M4.Rz(SP.rz),M4.Rx(SP.rx),EQ==="dagger"?M4.S(1.45,1.45,1.45):M4.id())]);
+ out.push([WMODELS[EQ][WEAP.tier],M4.chain(torso,M4.T(G[0],G[1],G[2]),M4.Ry(SP.ry),M4.Rz(SP.rz),M4.Rx(SP.rx),EQ==="dagger"?M4.S(1.45,1.45,1.45):M4.id())]);}
  const hm=M4.chain(torso,M4.T(0,0.71,0.01),M4.S(1.24,1.24,1.24),M4.Rx(-0.05*amt+Math.sin(ph*2)*0.02*amt));
  out.push([PT.head,hm]);out.push([PT.face,hm]);out.push([PT.hair,hm]);
  return out;}
@@ -875,7 +877,7 @@ const ARROW=TIER_COL.map((c,i)=>wpart(mb=>{const tc=hex(c);mb.cyl(0,-0.32,0,0.00
 const WNAME={staff:"Asa",hammer:"Çekiç",dagger:"Hançer",bow:"Yay"};
 const WMODELS={staff:STAFF,hammer:HAMMER,dagger:DAGGER,bow:BOW};
 const WFACT={staff:1,hammer:2,dagger:0.4,bow:0.8};
-const WATK={hammer:{dur:0.85,cd:1.4,range:1.9,area:"circle",r:1.3},dagger:{dur:0.24,cd:0.3,range:1.5,area:"single"},bow:{dur:0.5,cd:0.8,range:7.5,area:"arrow"}};
+const WATK={hammer:{dur:0.85,cd:1.4,range:1.9,area:"circle",r:1.3},dagger:{dur:0.24,cd:0.3,range:1.5,area:"single"},bow:{dur:0.5,cd:0.8,range:5.5,area:"arrow"}};
 let EQ="staff",WSTATE={staff:{tier:0,lvl:1},hammer:{tier:0,lvl:1},dagger:{tier:0,lvl:1},bow:{tier:0,lvl:1}};
 try{const s=JSON.parse(localStorage.getItem("arin_weap2")||"null");if(s&&s.s){WSTATE=Object.assign(WSTATE,s.s);EQ=s.eq||"staff";}else{const w=JSON.parse(localStorage.getItem("arin_weap")||"null");if(w&&typeof w.tier==="number")WSTATE.staff={tier:w.tier,lvl:w.lvl};}}catch(e){}
 WEAP=WSTATE[EQ];
@@ -894,15 +896,117 @@ function weapPose(a){if(EQ==="staff")return staffPose(WEAP.tier,a);const ez=x=>x
  return P0;}
 let ARROWS=[];
 function weapStrike(){if(EQ==="staff")return staffStrike();const T=WATK[EQ],tg=PL.target;if(!tg)return;const crit=Math.random()<(EQ==="dagger"?0.25:0.15);let dm=Math.round(weapDamage()*(0.9+Math.random()*0.2));if(crit)dm*=2;
- if(EQ==="bow"){const fx=Math.sin(P.yaw),fz=Math.cos(P.yaw);ARROWS.push({x:P.x+fx*0.3,y:1.05,z:P.z+fz*0.3,tg,dm,crit,t:0,tier:WEAP.tier});return;}
+ if(EQ==="bow"){bowRelease();return;}
  if(EQ==="dagger"){damageEnemy(tg,dm,crit);FX.push({k:"thrust",x:P.x,y:1.0,z:P.z,yaw:P.yaw,t:0,life:0.14,short:true,col:"230,235,255"});return;}
  // hammer: ground slam around the target
  for(const e of ENEMIES){if(e.state==="dead")continue;if(Math.hypot(e.x-tg.x,e.z-tg.z)<T.r+ETYPE[e.t].r)damageEnemy(e,e===tg?dm:Math.round(dm*0.7),e===tg&&crit);}
  FX.push({k:"ring",x:tg.x,y:0.05,z:tg.z,t:0,life:0.45,r0:0.3,r1:1.6,col:"240,215,170"});fxChunks(tg.x,0.2,tg.z,8,["#b89a6a","#8d8a84"],3,1);fxSmoke(tg.x,0.2,tg.z,4,"200,185,150");SHAKE=Math.max(SHAKE,0.16);HITSTOP=Math.max(HITSTOP,0.05);}
-function updArrows(dt){for(const a of ARROWS){a.t+=dt;const tx=a.tg.x,tz=a.tg.z,ty=0.95,dx=tx-a.x,dy=ty-a.y,dz=tz-a.z,d=Math.hypot(dx,dy,dz),sp=22*dt;
-  if(a.tg.state==="dead"||a.t>1.2){a.done=true;continue;}if(d<sp+0.25){a.done=true;damageEnemy(a.tg,a.dm,a.crit);fxSparks(tx,ty,tz,6,"255,236,180",3);continue;}
-  a.x+=dx/d*sp;a.y+=dy/d*sp;a.z+=dz/d*sp;a.yaw=Math.atan2(dx,dz);a.pitch=Math.atan2(dy,Math.hypot(dx,dz));}ARROWS=ARROWS.filter(a=>!a.done);}
-function arrowParts(){return ARROWS.map(a=>[ARROW[a.tier],M4.chain(M4.T(a.x,a.y,a.z),M4.Ry(a.yaw||0),M4.Rx(Math.PI/2-(a.pitch||0)))]);}
+
+// ================= bow: two-handed draw, quiver, tier colours, glow and tier skills =================
+const BOW_REC=[0,0,0.25,0.35,0.35,0.3,0.3],BOW_L=0.62;
+const bowTipZ=t=>-BOW_REC[t]*0.18-0.005;
+const BOW_SKILL=[{n:"Avcı Gözü",d:"4 m'den uzaktaki düşmana kritik şansı +%15"},{n:"Kızgın Ok",d:"Ok düşmanı 3 sn yakar"},{n:"Üçlü Atış",d:"Her 4. atışta 3 ok"},
+ {n:"Delici Ok",d:"Ok düşmanları delip geçer, ilkini geri iter"},{n:"Kristal Patlama",d:"Her 3. atışta mor kristal patlaması"},{n:"Yıldız Yağmuru",d:"Her 5. atışta hedefe ok yağmuru"},{n:"Işık Huzmesi",d:"Her 5. atışta delici ışın, vurdukça can verir"}];
+const ARROW_RGB=["170,120,70","230,110,60","235,180,80","215,225,240","185,110,255","110,150,255","255,232,160"];
+const BOWSTR=[0,1,2,3,4,5,6].map(i=>wpart(mb=>{const c=[hex("#d8c9a8"),hex("#d8c9a8"),hex("#e8dcc0"),hex("#c8ccd2"),WC.purple,hex("#f0e6c8"),hex("#fff6d8")][i];mb.cyl(0,0,0,0.006,0.006,1,4,c,false,i>=4?1:0);}));
+const QUIVER=TIER_COL.map((c,i)=>wpart(mb=>{const tc=hex(c),body=[WC.leather,WC.leather,WC.brD,hex("#3c3e43"),WC.obD,WC.lapisD,WC.cel][i];
+ mb.cyl(0,-0.22,0,0.07,0.085,0.44,10,body,true,i===6?1:0);ring(mb,0.2,0.088,0.035,tc);ring(mb,-0.2,0.074,0.03,tc);
+ for(let k=0;k<4;k++){const a=k*1.57+0.4;mb.cyl(Math.cos(a)*0.035,0.2,Math.sin(a)*0.035,0.006,0.006,0.1,4,WC.wood,false);mb.smooth=false;mb.xf(M4.chain(M4.T(Math.cos(a)*0.035,0.31,Math.sin(a)*0.035),M4.Ry(a)));
+  mb.quad([0,-0.02,0],[0,0.05,0],[0.03,0.02,0],[0.03,-0.03,0],tc,[0,0,1],i>=4?1:0);mb.quad([0,-0.02,0],[0,0.05,0],[0.03,0.02,0],[0.03,-0.03,0],tc,[0,0,-1],i>=4?1:0);mb.xf(null);mb.smooth=true;}}));
+// rebuild the bows without the straight string (the string is drawn live so it can be pulled)
+for(let i=0;i<7;i++){BOW[i]=wpart(mb=>{const C=[{limb:WC.wood,grip:WC.leather,tip:WC.bone},{limb:WC.woodD,alt:hex("#8a5a34"),grip:WC.leather,band:WC.cu,tip:WC.cu},{limb:WC.br,alt:WC.brD,grip:hex("#2b4a5a"),band:WC.gold,tip:WC.gold},
+  {limb:WC.fe,alt:WC.feD,grip:hex("#26272b"),band:hex("#2b4a5a"),tip:WC.fe},{limb:WC.ob,alt:WC.purple,grip:WC.obD,band:WC.purple,tip:WC.purple},{limb:WC.gold,alt:WC.lapis,grip:WC.lapisD,band:WC.gold,tip:WC.lapis},{limb:WC.cel,alt:WC.celG,grip:WC.celG,band:WC.celG,tip:hex("#ffffff")}][i];
+  const L=BOW_L,seg=12,rec=BOW_REC[i],fz=y=>{const t=Math.abs(y)/L;return 0.16*(1-t*t)-rec*Math.max(0,t-0.8)*0.9;};const ang=i===3||i===4;
+  for(let k=0;k<seg;k++){const y0=-L+k/seg*2*L,y1=-L+(k+1)/seg*2*L,z0=fz(y0),z1=fz(y1),len=Math.hypot(y1-y0,z1-z0),r=0.024*(1-Math.abs((y0+y1)/2)/L*0.55)*(i===3?1.15:1);
+   const em=i===6?1:(i===4&&k%2)?1:(i===5&&k%2&&false)?1:0;mb.xf(M4.chain(M4.T(0,y0,z0),M4.Rx(Math.atan2(z1-z0,y1-y0))));mb.cyl(0,0,0,r,r*0.95,len+0.004,ang?4:8,k%2&&C.alt?C.alt:C.limb,false,em);}
+  mb.xf(null);ring(mb,-0.07,0.032,0.14,C.grip);if(C.band)for(const y of[-0.42,0.42])mb.cyl(0,y,fz(y),0.03,0.03,0.03,8,C.band,false,i>=4?1:0);
+  for(const s of[-1,1])mb.sph(0,s*L,fz(s*L),0.03,0.03,0.03,C.tip,5,8,i>=4?1:0);
+  if(i===5)mb.sph(0,0.02,0.18,0.045,0.045,0.02,WC.gold,6,8,1);if(i===6)mb.sph(0,0.02,0.18,0.06,0.06,0.025,hex("#ffffff"),6,10,1);});}
+WMODELS.bow=BOW;WATK.bow={dur:0.62,cd:0.8,range:5.5,area:"arrow"};
+P.aim=0;P.shotN=0;P.nock=null;P.bowW=null;
+const segM=(A,B)=>{const d=[B[0]-A[0],B[1]-A[1],B[2]-A[2]],l=Math.hypot(d[0],d[1],d[2])||1e-4;return M4.chain(M4.T(A[0],A[1],A[2]),aimDown([-d[0],-d[1],-d[2]]),M4.S(1,l,1));};
+const lerp3=(a,b,t)=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t];
+function armTo(out,torso,sh,tg,upper,lower){const v=[tg[0]-sh[0],tg[1]-sh[1],tg[2]-sh[2]],L=Math.hypot(v[0],v[1],v[2]),reach=UA+FA+0.06,bend=Math.acos(Math.min(1,L/reach))*1.5;
+ const um=M4.chain(torso,M4.T(sh[0],sh[1],sh[2]),aimDown(v),M4.Rx(bend*0.5));out.push([PT.upperArm,um]);out.push([lower,M4.chain(um,M4.T(0,-UA,0),M4.Rx(-bend))]);}
+function bowParts(out,torso,amt,ph){const t=WEAP.tier,a=P.atk>0?Math.min(1,P.atk):0,aim=P.aim,ez=x=>x*x*(3-2*x),tz=bowTipZ(t);
+ const B0=[0.27,-0.02,0.1],B1=[0.1,0.33,0.4],B=lerp3(B0,B1,aim);
+ const bowM=M4.chain(torso,M4.T(B[0],B[1],B[2]),M4.Rz(-0.15*(1-aim)-0.06*aim),M4.Rx(0.3*(1-aim)));
+ // drawing hand (clay arm) path: quiver -> nock -> pulled -> release follow-through
+ const nock=[0,0,tz],Q=[-0.12,0.55,-0.2];const S0=M4.xp(bowM,nock);const toT=pt=>{// world -> torso local (approx via inverse of rigid part)
+  return pt;};
+ let pull=0,hand,showArrow=false;
+ const bowLocal=p=>{const w=M4.xp(M4.chain(M4.T(B[0],B[1],B[2]),M4.Rz(-0.15*(1-aim)-0.06*aim),M4.Rx(0.3*(1-aim))),p);return w;};
+ const N0=bowLocal([0,0,tz]);const Np=k=>bowLocal([0,0,tz-k]);
+ if(a<=0){hand=aim>0.5?N0:null;}
+ else if(a<0.18){hand=lerp3(N0,Q,ez(a/0.18));}
+ else if(a<0.3){hand=lerp3(Q,N0,ez((a-0.18)/0.12));showArrow=a>0.24;}
+ else if(a<0.55){pull=0.34*ez((a-0.3)/0.25);hand=Np(pull);showArrow=true;}
+ else if(a<0.75){const f=ez((a-0.55)/0.2);pull=-0.05*Math.sin(f*Math.PI*3)*(1-f);hand=lerp3(Np(0.34),Np(0.42),f);hand[0]-=0.06*f;}
+ else{hand=lerp3(Np(0.42),N0,ez((a-0.75)/0.25));}
+ // left (normal) arm holds the bow grip, right (clay) arm draws
+ armTo(out,torso,[0.225,0.33,0],B,PT.upperArm,PT.lowerL);
+ if(hand)armTo(out,torso,[-0.225,0.33,0],hand,PT.upperArm,PT.lowerR);
+ else{const p=ph;const sw=Math.sin(p)*0.5*amt;const um=M4.chain(torso,M4.T(-0.225,0.33,0),M4.Rz(-0.12),M4.Rx(-sw));out.push([PT.upperArm,um]);out.push([PT.lowerR,M4.chain(um,M4.T(0,-UA,0),M4.Rx(-0.25))]);}
+ out.push([BOW[t],bowM]);
+ const top=[0,BOW_L,tz],bot=[0,-BOW_L,tz],mid=[0,0,tz-pull];out.push([BOWSTR[t],M4.mul(bowM,segM(bot,mid))]);out.push([BOWSTR[t],M4.mul(bowM,segM(mid,top))]);
+ if(showArrow){out.push([ARROW[t],M4.chain(bowM,M4.T(0.02,0.01,tz-pull+0.3),M4.Rx(Math.PI/2))]);}
+ P.nock=M4.xp(M4.chain(bowM,M4.T(0,0,tz+0.35)),[0,0,0]);P.bowW=M4.xp(bowM,[0,0,0.1]);
+ out.push([QUIVER[t],M4.chain(torso,M4.T(0.1,0.24,-0.21),M4.Rz(0.45),M4.Rx(-0.15))]);}
+// releasing an arrow and the tier skill
+function shotDmg(tg,mult=1){const far=tg&&Math.hypot(tg.x-P.x,tg.z-P.z)>=4;const cc=0.15+(WEAP.tier===0&&far?0.15:0);const crit=Math.random()<cc;let d=Math.round(weapDamage()*mult*(0.9+Math.random()*0.2));if(crit)d*=2;return[d,crit];}
+function fireArrow(tg,opt={}){const st=P.nock||[P.x,1.05,P.z];const[d,crit]=shotDmg(tg,opt.mult||1);const dx=tg.x-st[0],dz=tg.z-st[2],l=Math.hypot(dx,dz)||1;
+ ARROWS.push({x:st[0],y:st[1],z:st[2],tg,dm:d,crit,t:0,tier:WEAP.tier,dir:[dx/l,0,dz/l],pierce:opt.pierce,explode:opt.explode,hit:new Set(),trail:[]});}
+function bowRelease(){const tg=PL.target;if(!tg)return;P.shotN++;const t=WEAP.tier,lvl=WEAP.lvl,n=P.shotN;
+ if(t===2&&n%4===0){fireArrow(tg);const others=ENEMIES.filter(e=>e!==tg&&e.state!=="dead"&&Math.hypot(e.x-P.x,e.z-P.z)<WATK.bow.range+1).sort((a,b)=>Math.hypot(a.x-P.x,a.z-P.z)-Math.hypot(b.x-P.x,b.z-P.z));
+  for(let k=0;k<2;k++)fireArrow(others[k]||tg);return;}
+ if(t===3){fireArrow(tg,{pierce:true});return;}
+ if(t===4&&n%3===0){fireArrow(tg,{explode:true});return;}
+ if(t===5&&n%5===0){fireArrow(tg);starRain(tg.x,tg.z,8+Math.floor(lvl/25));return;}
+ if(t===6&&n%5===0){lightBeam(tg);return;}
+ fireArrow(tg,{burn:t===1});}
+function aoe(x,z,r,dm,crit){for(const e of ENEMIES){if(e.state==="dead")continue;if(Math.hypot(e.x-x,e.z-z)<r+ETYPE[e.t].r)damageEnemy(e,dm,crit,{nokb:true});}}
+function starRain(x,z,n){FX.push({k:"seal",x,y:0.06,z,t:0,life:1.0,r:1.9});const[d]=shotDmg(null,0.5);
+ for(let k=0;k<n;k++){const a=Math.random()*6.283,r=Math.sqrt(Math.random())*1.8;ARROWS.push({rain:true,x:x+Math.cos(a)*r,y:7+Math.random()*1.5,z:z+Math.sin(a)*r,delay:0.15+k*0.06,dm:d,crit:false,t:0,tier:5,trail:[]});}}
+function lightBeam(tg){const dx=tg.x-P.x,dz=tg.z-P.z,l=Math.hypot(dx,dz)||1,ux=dx/l,uz=dz/l,L=7.5;let hits=0;const[d,crit]=shotDmg(tg,1.5);
+ for(const e of ENEMIES){if(e.state==="dead")continue;const ex=e.x-P.x,ez=e.z-P.z,al=ex*ux+ez*uz,sd=Math.abs(ex*uz-ez*ux);if(al>0&&al<L&&sd<0.55+ETYPE[e.t].r){damageEnemy(e,d,crit,{nokb:true});hits++;}}
+ if(hits){const h=Math.round(PL.hpMax*0.02*hits*(1+WEAP.lvl/100));PL.hp=Math.min(PL.hpMax,PL.hp+h);addFloat(P.x,2.1,P.z,"+"+h,"#6dff7a",false);}
+ FX.push({k:"beam",x:P.x,z:P.z,ux,uz,L,t:0,life:0.4});SHAKE=Math.max(SHAKE,0.12);}
+// arrow flight, impacts, trails
+function updArrows(dt){const SPD=15;
+ for(const a of ARROWS){a.t+=dt;
+  if(a.rain){if(a.delay>0){a.delay-=dt;continue;}a.trail.push([a.x,a.y,a.z]);if(a.trail.length>5)a.trail.shift();a.y-=18*dt;if(a.y<=0.15){a.done=true;aoe(a.x,a.z,0.75,a.dm,false);fxSparks(a.x,0.2,a.z,5,ARROW_RGB[5],3);FX.push({k:"ring",x:a.x,y:0.05,z:a.z,t:0,life:0.3,r0:0.1,r1:0.7,col:ARROW_RGB[5]});}continue;}
+  a.trail.push([a.x,a.y,a.z]);if(a.trail.length>(a.tier>=4?9:6))a.trail.shift();
+  if(a.pierce){a.x+=a.dir[0]*SPD*dt;a.z+=a.dir[2]*SPD*dt;a.y+=(0.95-a.y)*Math.min(1,dt*6);
+   for(const e of ENEMIES){if(e.state==="dead"||a.hit.has(e))continue;if(Math.hypot(e.x-a.x,e.z-a.z)<0.35+ETYPE[e.t].r){a.hit.add(e);damageEnemy(e,a.dm,a.crit,{kb:a.hit.size===1?0.9:0.2});fxSparks(e.x,0.95,e.z,5,ARROW_RGB[3],3);}}
+   if(a.t>0.75)a.done=true;a.yaw=Math.atan2(a.dir[0],a.dir[2]);a.pitch=0;continue;}
+  const tx=a.tg.x,tz=a.tg.z,ty=0.95,dx=tx-a.x,dy=ty-a.y,dz=tz-a.z,d=Math.hypot(dx,dy,dz),sp=SPD*dt;
+  if(a.tg.state==="dead"||a.t>1.4){a.done=true;continue;}
+  if(d<sp+0.25){a.done=true;damageEnemy(a.tg,a.dm,a.crit);fxSparks(tx,ty,tz,6,ARROW_RGB[a.tier],3);
+   if(a.tier===1&&!a.noburn){a.tg.burn={t:3,dps:Math.max(1,Math.round(a.dm*0.3*(1+WEAP.lvl/100))),acc:0,tick:0};}
+   if(a.explode){const[d2,c2]=shotDmg(null,0.8);aoe(tx,tz,1.6,d2,c2);FX.push({k:"ring",x:tx,y:0.05,z:tz,t:0,life:0.5,r0:0.3,r1:1.9,col:"190,120,255"});fxChunks(tx,0.5,tz,12,["#b46cff","#7a3ad0","#2a2236"],3.5,1.1);fxSparks(tx,0.7,tz,14,"200,140,255",6);
+    for(let k=0;k<6;k++){const an=k/6*6.283,r=0.5+Math.random();FX.push({k:"spike",x:tx+Math.cos(an)*r,y:0,z:tz+Math.sin(an)*r,t:0,life:0.5,h:0.5+Math.random()*0.5,col:"180,110,255"});}SHAKE=Math.max(SHAKE,0.12);}
+   continue;}
+  a.x+=dx/d*sp;a.y+=dy/d*sp;a.z+=dz/d*sp;a.yaw=Math.atan2(dx,dz);a.pitch=Math.atan2(dy,Math.hypot(dx,dz));}
+ ARROWS=ARROWS.filter(a=>!a.done);
+ // burning enemies
+ for(const e of ENEMIES){if(!e.burn||e.state==="dead"){if(e.state==="dead")e.burn=null;continue;}e.burn.t-=dt;e.burn.tick+=dt;
+  if(Math.random()<dt*14)FX.push({k:"spark",x:e.x+(Math.random()-0.5)*0.4,y:0.5+Math.random()*0.9,z:e.z+(Math.random()-0.5)*0.4,vx:0,vy:rnd(0.8,1.8),vz:0,t:0,life:0.45,col:"255,130,50",up:true});
+  if(e.burn.tick>=0.5){e.burn.tick-=0.5;damageEnemy(e,Math.max(1,Math.round(e.burn.dps*0.5)),false,{dot:true});}if(e.burn.t<=0)e.burn=null;}
+ // the aim pose: bow raised while there is something to shoot
+ P.aim+=(((EQ==="bow"&&(PL.target||P.atk>0))?1:0)-P.aim)*Math.min(1,dt*8);}
+function arrowParts(){return ARROWS.filter(a=>!(a.rain&&a.delay>0)).map(a=>[ARROW[a.tier],a.rain?M4.chain(M4.T(a.x,a.y,a.z),M4.Rx(Math.PI)):M4.chain(M4.T(a.x,a.y,a.z),M4.Ry(a.yaw||0),M4.Rx(Math.PI/2-(a.pitch||0)))]);}
+function drawArrowFX(){oc.globalCompositeOperation="lighter";
+ for(const a of ARROWS){if(a.rain&&a.delay>0)continue;const col=ARROW_RGB[a.tier],glow=a.tier>=4;
+  if(a.trail.length>1){for(let k=1;k<a.trail.length;k++){const p0=toScreen(a.trail[k-1]),p1=toScreen(a.trail[k]);if(p0[2]<0||p1[2]<0)continue;const q=k/a.trail.length;oc.globalAlpha=q*(glow?0.9:0.55);oc.strokeStyle=`rgba(${col},1)`;oc.lineWidth=(glow?4:2.2)*q;oc.lineCap="round";oc.beginPath();oc.moveTo(p0[0],p0[1]);oc.lineTo(p1[0],p1[1]);oc.stroke();}}
+  if(glow){const[s,ppm]=ppmAt(a.x,a.y,a.z);if(s[2]<0)continue;const R=ppm*0.55;const g=oc.createRadialGradient(s[0],s[1],0,s[0],s[1],R);g.addColorStop(0,`rgba(${col},.95)`);g.addColorStop(1,`rgba(${col},0)`);oc.globalAlpha=1;oc.fillStyle=g;oc.beginPath();oc.arc(s[0],s[1],R,0,7);oc.fill();
+   const sg=toScreen([a.x,0.03,a.z]);oc.globalAlpha=0.45;const g2=oc.createRadialGradient(sg[0],sg[1],0,sg[0],sg[1],ppm*1.3);g2.addColorStop(0,`rgba(${col},.8)`);g2.addColorStop(1,`rgba(${col},0)`);oc.fillStyle=g2;oc.beginPath();oc.ellipse(sg[0],sg[1],ppm*1.3,ppm*0.75,0,0,7);oc.fill();}}
+ // glowing bow from obsidian upward
+ if(EQ==="bow"&&WEAP.tier>=4&&P.bowW&&PL.dead===0){const[s,ppm]=ppmAt(P.bowW[0],P.bowW[1],P.bowW[2]);if(s[2]>0){const col=ARROW_RGB[WEAP.tier],pulse=0.65+0.35*Math.sin(performance.now()/260)+(P.atk>0.3&&P.atk<0.55?0.4:0);
+  oc.globalAlpha=Math.min(1,0.5*pulse);const R=ppm*(WEAP.tier===6?1.1:0.8);const g=oc.createRadialGradient(s[0],s[1],0,s[0],s[1],R);g.addColorStop(0,`rgba(${col},.7)`);g.addColorStop(1,`rgba(${col},0)`);oc.fillStyle=g;oc.beginPath();oc.arc(s[0],s[1],R,0,7);oc.fill();}}
+ oc.globalCompositeOperation="source-over";oc.globalAlpha=1;}
+function bowLight(){// one coloured light for the shader: a glowing arrow in flight, else the glowing bow
+ for(let k=ARROWS.length-1;k>=0;k--){const a=ARROWS[k];if(a.tier>=4&&!(a.rain&&a.delay>0)){const c=ARROW_RGB[a.tier].split(",").map(v=>v/255*1.2);return[[a.x,a.y,a.z],c];}}
+ if(EQ==="bow"&&WEAP.tier>=4&&P.bowW){const c=ARROW_RGB[WEAP.tier].split(",").map(v=>v/255*(WEAP.tier===6?0.7:0.4));return[P.bowW,c];}return[[0,-99,0],[0,0,0]];}
 
 // ================= enemies: 3D models from the original drawings =================
 const EC={skin:hex("#c08354"),skinD:hex("#a86e43"),bronze:hex("#b8863a"),bronzeD:hex("#8a5f22"),gold:hex("#d6a640"),white:hex("#efe9da"),kilt:hex("#ece4d0"),wood:hex("#6b4a2c"),
@@ -1042,9 +1146,10 @@ P.atk=0;P.atkHit=false;
 function eFree(e,x,z){const r=0.22;return!blocked(Math.floor(x-r),Math.floor(z-r))&&!blocked(Math.floor(x+r),Math.floor(z-r))&&!blocked(Math.floor(x-r),Math.floor(z+r))&&!blocked(Math.floor(x+r),Math.floor(z+r));}
 function addFloat(x,y,z,text,col,big){FLOATS.push({x,y,z,text,col,big,t:0});}
 function burst(x,y,z,col,n){for(let k=0;k<n;k++)FX.push({x,y,z,vx:(Math.random()-0.5)*3,vy:1+Math.random()*2.5,vz:(Math.random()-0.5)*3,t:0,life:0.5+Math.random()*0.4,col});}
-function damageEnemy(e,amt,crit){e.hp-=amt;e.flash=0.14;e.showHp=4;if(e.state==="idle"||e.state==="return")e.state="chase";addFloat(e.x,ETYPE[e.t].hpY,e.z,crit?amt+"!":String(amt),crit?"#ffd23a":"#ffffff",crit);
- const dx=e.x-P.x,dz=e.z-P.z,l=Math.hypot(dx,dz)||1,kb=crit?0.5:0.25;if(eFree(e,e.x+dx/l*kb,e.z+dz/l*kb)){e.x+=dx/l*kb;e.z+=dz/l*kb;}
- fxHit(e,crit);
+function damageEnemy(e,amt,crit,o={}){e.hp-=amt;e.showHp=4;if(e.state==="idle"||e.state==="return")e.state="chase";
+ if(o.dot){addFloat(e.x,ETYPE[e.t].hpY-0.2,e.z,String(amt),"#ff9a40",false);}else{e.flash=0.14;addFloat(e.x,ETYPE[e.t].hpY,e.z,crit?amt+"!":String(amt),crit?"#ffd23a":"#ffffff",crit);
+ const dx=e.x-P.x,dz=e.z-P.z,l=Math.hypot(dx,dz)||1,kb=o.nokb?0.08:o.kb!==undefined?o.kb:crit?0.5:0.25;if(eFree(e,e.x+dx/l*kb,e.z+dz/l*kb)){e.x+=dx/l*kb;e.z+=dz/l*kb;}
+ fxHit(e,crit);}
  if(e.hp<=0){e.hp=0;e.dead=0.001;e.state="dead";e.respawn=25;fxDeath(e);spawnDrop(e);chestKill();}}
 function damagePlayer(amt){if(PL.dead>0||PL.inv>0)return;PL.hp-=amt;PL.regenT=0;addFloat(P.x,1.9,P.z,"-"+amt,"#ff5a4a",false);P.flash=0.15;fxPlayerHit();
  if(PL.hp<=0){PL.hp=0;PL.dead=0.001;}}
@@ -1063,7 +1168,7 @@ function updCombat(dt){
  PL.target=best&&bd<curAtk().range+ETYPE[best.t].r?best:null;
  if(PL.target&&PL.atkCd<=0&&P.atk<=0){P.atk=0.0001;P.atkHit=false;PL.atkCd=atkCd();}
  if(PL.target&&!P.moving)P.tYaw=Math.atan2(PL.target.x-P.x,PL.target.z-P.z);
- if(P.atk>0){P.atk+=dt/curAtk().dur;if(!P.atkHit&&P.atk>=0.5){P.atkHit=true;weapStrike();}if(P.atk>=1)P.atk=0;}
+ if(P.atk>0){P.atk+=dt/curAtk().dur;if(!P.atkHit&&P.atk>=(EQ==="bow"?0.55:0.5)){P.atkHit=true;weapStrike();}if(P.atk>=1)P.atk=0;}
  updDrops(dt);updArrows(dt);
  // enemies: shared path field toward the player
  {const px=Math.floor(P.x),pz=Math.floor(P.z);flowT-=dt;if(!FLOW||flowT<=0||FLOW.cx!==px||FLOW.cz!==pz){FLOW=bfsField(px,pz,FR);FLOW.cx=px;FLOW.cz=pz;flowT=0.6;}}
@@ -1087,7 +1192,7 @@ function updCombat(dt){
   if(dP<0.55&&dP>0){const push=(0.55-dP);if(eFree(e,e.x-(P.x-e.x)/dP*push,e.z-(P.z-e.z)/dP*push)){e.x-=(P.x-e.x)/dP*push;e.z-=(P.z-e.z)/dP*push;}}}
  for(const f of FLOATS)f.t+=dt;FLOATS=FLOATS.filter(f=>f.t<1.1);
  updFX(dt);}
-function drawCombatOverlay(){drawDrops();
+function drawCombatOverlay(){drawDrops();drawArrowFX();
  for(const e of ENEMIES){if(e.state==="dead"||e.showHp<=0)continue;const s=toScreen([e.x,ETYPE[e.t].hpY,e.z]);if(s[2]<0)continue;const w=46,a=Math.min(1,e.showHp);
   oc.globalAlpha=a;oc.fillStyle="rgba(0,0,0,.6)";oc.fillRect(s[0]-w/2-1,s[1]-1,w+2,7);oc.fillStyle="#e2483b";oc.fillRect(s[0]-w/2,s[1],w*e.hp/e.hpMax,5);oc.globalAlpha=1;}
  drawFX();
@@ -1136,6 +1241,8 @@ function drawFX(){
   else if(p.k==="flash"){const[s,ppm]=ppmAt(p.x,p.y,p.z);if(s[2]<0)continue;const R=ppm*(p.crit?0.95:0.65)*(0.6+q*0.6);oc.globalAlpha=1-q;
    const g=oc.createRadialGradient(s[0],s[1],0,s[0],s[1],R);g.addColorStop(0,"rgba(255,255,240,1)");g.addColorStop(0.35,p.crit?"rgba(255,210,90,.85)":"rgba(255,230,170,.7)");g.addColorStop(1,"rgba(255,160,60,0)");oc.fillStyle=g;oc.beginPath();oc.arc(s[0],s[1],R,0,7);oc.fill();
    oc.strokeStyle="rgba(255,250,220,1)";oc.lineWidth=2.2;const n=p.crit?8:6;for(let k=0;k<n;k++){const a=k/n*6.283+0.3,l=R*(k%2?0.9:1.4);oc.beginPath();oc.moveTo(s[0]+Math.cos(a)*R*0.25,s[1]+Math.sin(a)*R*0.25);oc.lineTo(s[0]+Math.cos(a)*l,s[1]+Math.sin(a)*l);oc.stroke();}}
+  else if(p.k==="beam"){const a=toScreen([p.x,1.0,p.z]),b=toScreen([p.x+p.ux*p.L,1.0,p.z+p.uz*p.L]);if(a[2]<0)continue;const[,ppm]=ppmAt(p.x,1.0,p.z);const w=ppm*0.45*(q<0.15?q/0.15:1)*(1-q*0.6);oc.globalAlpha=1-q*q;
+   oc.lineCap="round";oc.strokeStyle="rgba(255,220,120,.55)";oc.lineWidth=w*2.4;oc.beginPath();oc.moveTo(a[0],a[1]);oc.lineTo(b[0],b[1]);oc.stroke();oc.strokeStyle="rgba(255,252,235,1)";oc.lineWidth=w;oc.beginPath();oc.moveTo(a[0],a[1]);oc.lineTo(b[0],b[1]);oc.stroke();}
   else if(p.k==="wave"){const d=0.3+p.len*Math.min(1,q*1.6),cx=p.x+p.dx*d,cz=p.z+p.dz*d;const[s,ppm]=ppmAt(cx,p.y,cz);if(s[2]<0)continue;const f=toScreen([cx+p.dx,p.y,cz+p.dz]),ang=Math.atan2(f[1]-s[1],f[0]-s[0]);
    oc.globalAlpha=(1-q)*0.95;oc.save();oc.translate(s[0],s[1]);oc.rotate(ang);oc.scale(1,0.75);const R=ppm*(0.8+q*0.6);const g=oc.createLinearGradient(-R*0.3,0,R*0.3,0);g.addColorStop(0,`rgba(${p.col},0)`);g.addColorStop(1,`rgba(${p.col},1)`);
    oc.fillStyle=g;oc.beginPath();oc.arc(0,0,R,-1.15,1.15);oc.arc(-R*0.35,0,R*0.9,1.0,-1.0,true);oc.closePath();oc.fill();oc.restore();}
@@ -1192,7 +1299,7 @@ function updDrops(dt){for(const d of DROPS){d.t+=dt;if(d.y>0.55||d.vy>0){d.vy-=9
   const dist=Math.hypot(P.x-d.x,P.z-d.z);if(d.t>0.5&&dist<3.2&&PL.dead===0){const s=Math.min(1,dt*(8/Math.max(0.4,dist)));d.x+=(P.x-d.x)*s;d.z+=(P.z-d.z)*s;}
   if(d.t>0.5&&dist<0.6){d.done=true;addWeaponLevels(d.gain);fxSparks(P.x,1.0,P.z,8,"255,226,140",3);}}
  DROPS=DROPS.filter(d=>!d.done&&d.t<45);
- if(WEAP.tier===6){runeT-=dt;if(runeT<=0){runeT=0.12;const a=Math.random()*6.283;FX.push({k:"spark",x:P.x+Math.cos(a)*0.45,y:0.3+Math.random()*0.8,z:P.z+Math.sin(a)*0.45,vx:0,vy:rnd(0.6,1.4),vz:0,t:0,life:0.7,col:"255,230,150",up:true});}}}
+ if(WEAP.tier>=5){runeT-=dt;if(runeT<=0){runeT=WEAP.tier===6?0.12:(P.moving?0.16:0.5);const a=Math.random()*6.283;FX.push({k:"spark",x:P.x+Math.cos(a)*0.45,y:0.3+Math.random()*0.8,z:P.z+Math.sin(a)*0.45,vx:0,vy:rnd(0.6,1.4),vz:0,t:0,life:0.7,col:WEAP.tier===6?"255,230,150":(Math.random()<0.5?"110,150,255":"255,215,110"),up:true});}}}
 function dropParts(){const out=[];const tnow=performance.now()/1000;for(const d of DROPS){if(Math.hypot(d.x-cam.x,d.z-(cam.z-3))>28)continue;
   out.push([WMODELS[EQ][WEAP.tier],M4.chain(M4.T(d.x,d.y+Math.sin(tnow*3+d.x)*0.06,d.z),M4.Ry(tnow*2.2+d.x),M4.Rz(0.5),M4.S(0.55,0.55,0.55))]);}return out;}
 function drawDrops(){for(const d of DROPS){const s=toScreen([d.x,0.05,d.z]);if(s[2]<0)continue;const[,ppm]=ppmAt(d.x,0.05,d.z);const pulse=0.75+0.25*Math.sin(performance.now()/180+d.x);
@@ -1267,7 +1374,7 @@ function renderInv(){const tabs=[["w","Silahlar"],["t","Tabletler"],["c","Karakt
   const cards=Object.keys(WNAME).map(k=>{const own=CHEST.own[k],s=WSTATE[k],c=TIER_COL[s.tier],A=k==="staff"?STAFF_ATK[s.tier]:WATK[k];
    if(!own)return`<div class="wc lk"><div class="ic">${wIcon(k,"#777")}</div><div class="inf"><div class="nm">${WNAME[k]}</div><div class="st">Kilitli · Sandıklardan çıkabilir</div></div></div>`;
    return`<div class="wc ${k===EQ?"on":""}" style="border-color:${k===EQ?c:"rgba(255,255,255,.12)"}"><div class="ic" style="border-color:${c}">${wIcon(k,c)}</div><div class="inf"><div class="nm" style="color:${c}">${weapName(k)} ${k===EQ?"<i>KUŞANILDI</i>":`<u class="eq" data-k="${k}">Kuşan</u>`}</div>
-    <div class="bar"><i style="width:${s.tier===6&&s.lvl>=100?100:s.lvl}%;background:${c}"></i></div><div class="st">Kademe ${s.tier+1}/7 · Sv ${s.lvl}/100 · Hasar ${weapDamage(k)} · Menzil ${A.range} m</div></div></div>`;}).join("");
+    <div class="bar"><i style="width:${s.tier===6&&s.lvl>=100?100:s.lvl}%;background:${c}"></i></div><div class="st">Kademe ${s.tier+1}/7 · Sv ${s.lvl}/100 · Hasar ${weapDamage(k)} · Menzil ${A.range} m</div>${k==="bow"?`<div class="sk">✦ ${BOW_SKILL[s.tier].n}: ${BOW_SKILL[s.tier].d}</div>`:""}</div></div>`;}).join("");
   const tiers=TIER_NAMES.map((n,i)=>`<span style="background:${TIER_COL[i]};opacity:${i<=WEAP.tier?1:0.28}" title="${n}">${i+1}</span>`).join("");
   body=`<div class="sec">Kuşanılan silahlar</div><div class="slots4">${slots}</div><div class="sec">${WNAME[EQ]} kademeleri</div><div class="tiers">${tiers}</div><div class="sec">Koleksiyon</div>${cards}
    <button class="test">Test: ${WNAME[EQ]} kademesini değiştir</button><button class="test all">Test: tüm silahların kilidini aç</button>`;}
@@ -1394,7 +1501,7 @@ function render(t){computeVP();const chars=characterParts();const ens=[];for(con
  gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,gdTex);gl.uniform1i(u.uGD,1);
  gl.activeTexture(gl.TEXTURE2);gl.bindTexture(gl.TEXTURE_2D,rtTex);gl.uniform1i(u.uRT,2);
  gl.activeTexture(gl.TEXTURE3);gl.bindTexture(gl.TEXTURE_2D,covTex);gl.uniform1i(u.uCov,3);gl.activeTexture(gl.TEXTURE0);
- gl.uniform2f(u.uMS,MAP.W,MAP.H);
+ gl.uniform2f(u.uMS,MAP.W,MAP.H);{const bl=bowLight();gl.uniform3fv(u.uL2p,bl[0]);gl.uniform3fv(u.uL2c,bl[1]);}
  gl.disable(gl.BLEND);gl.depthMask(true);
  for(const c of vis)draw(c.mesh,null);
  TINT=[1,1,1];const pf=P.flash>0?[2.2,1.3,1.2]:[1,1,1];for(const [m,mx] of chars)draw(m,mx,pf);for(const [m,mx,fl] of ens)draw(m,mx,fl?[2.4,2.4,2.4]:[1,1,1]);
