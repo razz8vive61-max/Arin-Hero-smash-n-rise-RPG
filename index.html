@@ -53,6 +53,44 @@
   #chui .ow{border-radius:9px;padding:6px 2px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);opacity:.45;font-size:12px;font-weight:800}
   #chui .ow.on{opacity:1;border-color:#d8a240}
   #chui .ow small{display:block;font-weight:500;font-size:9.5px;opacity:.85;margin-top:2px}
+  #invbtn{position:fixed;right:14px;bottom:calc(env(safe-area-inset-bottom,0px) + 136px);width:50px;height:50px;border-radius:50%;background:rgba(10,8,6,.55);border:1.5px solid rgba(255,220,150,.35);z-index:3;display:flex;align-items:center;justify-content:center;touch-action:none}
+  #invui{position:fixed;inset:0;background:rgba(6,4,2,.72);z-index:10;display:none;align-items:center;justify-content:center;touch-action:none}
+  #invui.show{display:flex}
+  #invui .panel{width:min(94vw,400px);max-height:86vh;display:flex;flex-direction:column;background:linear-gradient(#3a2614,#22160b);border:2px solid #a8742e;border-radius:16px;padding:14px;color:#fff;box-shadow:0 10px 40px rgba(0,0,0,.6)}
+  #invui .hd{display:flex;justify-content:space-between;align-items:center;font-weight:900;font-size:19px;color:#ffd35a}
+  #invui .x{font-style:normal;font-size:20px;opacity:.8;cursor:pointer;padding:2px 6px}
+  #invui .tabsbar{display:flex;gap:6px;margin:10px 0 8px}
+  #invui .tb{flex:1;text-align:center;padding:8px 0;border-radius:10px;background:rgba(255,255,255,.07);font-size:13px;cursor:pointer;border:1px solid rgba(255,255,255,.1)}
+  #invui .tb.on{background:linear-gradient(#f0c35a,#c48a2c);color:#2a1708;border-color:transparent}
+  #invui .bd{overflow-y:auto;padding-right:2px}
+  #invui .sec{font-size:11px;letter-spacing:.5px;text-transform:uppercase;opacity:.7;margin:10px 0 6px;font-weight:800}
+  #invui .slots4{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+  #invui .sl{aspect-ratio:1;border-radius:11px;border:2px dashed rgba(255,255,255,.2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;background:rgba(0,0,0,.25)}
+  #invui .sl.on{border-style:solid;background:rgba(0,0,0,.35)}
+  #invui .sl small{font-size:9.5px;opacity:.85;text-align:center}
+  #invui .tiers{display:flex;gap:5px}
+  #invui .tiers span{flex:1;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:#1a1008}
+  #invui .wc{display:flex;gap:10px;align-items:center;padding:8px;border-radius:12px;background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.12);margin-bottom:7px}
+  #invui .wc.lk{opacity:.5}
+  #invui .ic{width:46px;height:46px;flex:0 0 46px;border-radius:10px;border:2px solid rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.3)}
+  #invui .inf{flex:1;min-width:0}
+  #invui .nm{font-weight:900;font-size:14px}
+  #invui .nm i{font-style:normal;font-size:9px;background:#3fa830;color:#fff;border-radius:5px;padding:2px 5px;margin-left:5px;vertical-align:middle}
+  #invui .nm i.soon{background:#8a6a3a}
+  #invui .bar{height:6px;border-radius:3px;background:rgba(255,255,255,.15);margin:5px 0 4px;overflow:hidden}
+  #invui .bar i{display:block;height:100%}
+  #invui .st{font-size:11px;opacity:.8}
+  #invui .tabs7{display:flex;flex-direction:column;gap:6px}
+  #invui .tbl{display:flex;gap:10px;align-items:center;padding:7px;border-radius:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1)}
+  #invui .tic{width:34px;height:34px;border-radius:8px;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center}
+  #invui .tic svg{width:20px}
+  #invui .tbl b{display:block;font-size:13px}
+  #invui .tbl small{font-size:11px;opacity:.75}
+  #invui .note{font-size:11px;opacity:.7;margin:10px 2px 2px}
+  #invui .stats{display:flex;flex-direction:column;gap:5px}
+  #invui .stats div{display:flex;justify-content:space-between;padding:9px 10px;border-radius:9px;background:rgba(255,255,255,.05);font-size:13px}
+  #invui .stats b{color:#ffd35a}
+  #invui .test{margin-top:8px;width:100%;background:rgba(255,255,255,.08);border:1px dashed rgba(255,255,255,.3);color:#fff;border-radius:10px;padding:8px;font-size:12px}
   #slots{position:fixed;left:0;right:0;bottom:calc(env(safe-area-inset-bottom,0px) + 8px);display:flex;justify-content:center;gap:6px;padding:0 8px;pointer-events:none}
   .slot{position:relative;width:min(12vw,52px);aspect-ratio:1;border-radius:10px;background:rgba(255,255,255,.14);border:1.5px solid rgba(255,255,255,.28);display:flex;align-items:flex-end;justify-content:center;color:rgba(255,255,255,.85);font-size:9px;font-weight:700;padding-bottom:3px;box-sizing:border-box;text-shadow:0 1px 2px #000}
   .slot svg{position:absolute;top:22%;left:50%;width:42%;transform:translateX(-50%);opacity:.85}
@@ -1067,7 +1105,7 @@ const wsEl=document.createElement("div");wsEl.id="wslot";document.body.appendChi
 function updWeapUI(){const n=TIER_NAMES[WEAP.tier]+" Asa",col=TIER_COL[WEAP.tier];
  wsEl.innerHTML=`<div class="wi" style="border-color:${col};box-shadow:0 0 10px ${col}88"><svg viewBox="0 0 24 24" width="26" height="26"><path d="M7 21 L15 7" stroke="${col}" stroke-width="2.6" stroke-linecap="round"/><circle cx="16" cy="5.5" r="3" fill="${col}"/></svg><b>${WEAP.tier+1}</b></div>
  <div class="wt"><div class="wn" style="color:${col}">${n}</div><div class="wb"><i style="width:${WEAP.tier===6&&WEAP.lvl>=100?100:WEAP.lvl}%;background:${col}"></i></div><div class="wl">Sv ${WEAP.lvl}${WEAP.tier===6&&WEAP.lvl>=100?" · MAKS":" / 100"} · Hasar ${staffDamage()}</div></div>`;}
-wsEl.addEventListener("pointerdown",e=>{e.stopPropagation();WEAP.tier=(WEAP.tier+1)%7;WEAP.lvl=1;saveWeap();updWeapUI();tierUpFX();});
+wsEl.addEventListener("pointerdown",e=>{e.stopPropagation();e.preventDefault();invTab="w";openInv();});
 updWeapUI();
 
 // ================= chests: earned by kills, opened from the chest menu =================
@@ -1115,6 +1153,37 @@ function closeChestUI(){chestOpen=false;chUI.classList.remove("show");}
 chBtn.addEventListener("pointerdown",e=>{e.stopPropagation();e.preventDefault();openChestUI();});
 chUI.addEventListener("pointerdown",e=>e.stopPropagation());
 updChestBtn();
+
+// ================= inventory: weapons, tablets, character =================
+const TABLETS=[{n:"Ateş",u:"Bakır kademesi"},{n:"Rüzgâr",u:"Bronz kademesi"},{n:"Kan",u:"Demir kademesi"},{n:"Taş",u:"Obsidyen kademesi"},{n:"Gölge",u:"Altın-Lapis kademesi"},{n:"Ses",u:"Göksel kademesi"},{n:"Ad",u:"Hikâyenin sırrı"}];
+const WICON={staff:'<path d="M7 21 L15 7" stroke-width="2.6" stroke-linecap="round"/><circle cx="16" cy="5.5" r="3"/>',
+ hammer:'<path d="M9 21 L13 10" stroke-width="2.4" stroke-linecap="round"/><rect x="8" y="3" width="11" height="7" rx="1.5" transform="rotate(20 13 6)"/>',
+ dagger:'<path d="M12 3 L14 13 L12 15 L10 13 Z"/><path d="M8 15 H16 M12 15 V21" stroke-width="2.2" stroke-linecap="round"/>',
+ bow:'<path d="M7 3 Q18 12 7 21" fill="none" stroke-width="2.4"/><path d="M7 3 V21" stroke-width="1"/><path d="M5 12 H19 M16 9 L19 12 L16 15" stroke-width="1.8" fill="none" stroke-linecap="round"/>'};
+const wIcon=(k,col)=>`<svg viewBox="0 0 24 24" width="30" height="30" fill="${col}" stroke="${col}">${WICON[k]}</svg>`;
+const invBtn=document.createElement("div");invBtn.id="invbtn";invBtn.innerHTML='<svg viewBox="0 0 32 32" width="30" height="30"><path d="M8 11 h16 l2 16 a2 2 0 0 1-2 2 H8 a2 2 0 0 1-2-2 Z" fill="#a8743e" stroke="#2e1c0e" stroke-width="2"/><path d="M12 11 V8 a4 4 0 0 1 8 0 V11" fill="none" stroke="#2e1c0e" stroke-width="2.2"/><path d="M7 16 H25" stroke="#e2b247" stroke-width="2.5"/><circle cx="16" cy="16" r="2.4" fill="#ffe08a" stroke="#7a4e18"/></svg>';document.body.appendChild(invBtn);
+const invUI=document.createElement("div");invUI.id="invui";document.body.appendChild(invUI);
+let invOpen=false,invTab="w";
+function renderInv(){const tabs=[["w","Silahlar"],["t","Tabletler"],["c","Karakter"]].map(([k,n])=>`<b class="tb ${invTab===k?"on":""}" data-t="${k}">${n}</b>`).join("");let body="";
+ if(invTab==="w"){const col=TIER_COL[WEAP.tier];
+  const slots=[0,1,2,3].map(i=>i===0?`<div class="sl on" style="border-color:${col}">${wIcon("staff",col)}<small>${TIER_NAMES[WEAP.tier]} Asa</small></div>`:`<div class="sl"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#fff" stroke-width="2.2"><rect x="5" y="10" width="14" height="11" rx="2" fill="rgba(255,255,255,.2)"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg><small>${["","Sv 5","Sv 15","Sv 30"][i]}</small></div>`).join("");
+  const cards=Object.keys(WNAME).map(k=>{const own=CHEST.own[k];if(k==="staff")return`<div class="wc on" style="border-color:${col}"><div class="ic" style="border-color:${col}">${wIcon(k,col)}</div><div class="inf"><div class="nm" style="color:${col}">${TIER_NAMES[WEAP.tier]} Asa <i>KUŞANILDI</i></div>
+    <div class="bar"><i style="width:${WEAP.tier===6&&WEAP.lvl>=100?100:WEAP.lvl}%;background:${col}"></i></div><div class="st">Kademe ${WEAP.tier+1}/7 · Sv ${WEAP.lvl}/100 · Hasar ${staffDamage()} · Menzil ${STAFF_ATK[WEAP.tier].range} m</div></div></div>`;
+   return`<div class="wc ${own?"":"lk"}"><div class="ic">${wIcon(k,own?"#d8c9a8":"#777")}</div><div class="inf"><div class="nm">${WNAME[k]} ${own?"<i class='soon'>YAKINDA</i>":""}</div><div class="st">${own?"Koleksiyonda. Bir sonraki güncellemede kullanılabilir olacak.":"Kilitli · Sandıklardan çıkabilir"}</div></div></div>`;}).join("");
+  const tiers=TIER_NAMES.map((n,i)=>`<span style="background:${TIER_COL[i]};opacity:${i<=WEAP.tier?1:0.28}" title="${n}">${i+1}</span>`).join("");
+  body=`<div class="sec">Kuşanılan silahlar</div><div class="slots4">${slots}</div><div class="sec">Asa kademeleri</div><div class="tiers">${tiers}</div><div class="sec">Koleksiyon</div>${cards}
+   <button class="test">Test: Asa kademesini değiştir</button>`;}
+ else if(invTab==="t"){body=`<div class="sec">Kutsal tabletler (0/7)</div><div class="tabs7">${TABLETS.map((tb,i)=>`<div class="tbl"><div class="tic">${LOCK}</div><div><b>${tb.n} Tableti</b><small>${tb.u}${i<6?" kilidini açar":""}</small></div></div>`).join("")}</div>
+  <p class="note">Tabletler dünyanın gizli köşelerine saklı. Her biri silahlarının bir üst kademeye geçmesinin kilidini açar.</p>`;}
+ else{const rows=[["Can",fmtHP(PL.hpMax)],["Can yenilenme",PL.regen+" / sn"],["Silah hasarı",staffDamage()],["Kritik şansı","%15 (2× hasar)"],["Saldırı aralığı",Math.max(0.7,STAFF_ATK[WEAP.tier].dur+0.12).toFixed(2)+" sn"],["Menzil",STAFF_ATK[WEAP.tier].range+" m"],["Öldürülen düşman",CHEST.kills],["Keşfedilen bölge",DISC.filter(Boolean).length+" / 9"]];
+  body=`<div class="sec">Arin</div><div class="stats">${rows.map(r=>`<div><span>${r[0]}</span><b>${r[1]}</b></div>`).join("")}</div>`;}
+ invUI.innerHTML=`<div class="panel"><div class="hd"><span>Envanter</span><i class="x">✕</i></div><div class="tabsbar">${tabs}</div><div class="bd">${body}</div></div>`;
+ invUI.querySelector(".x").onclick=closeInv;invUI.querySelectorAll(".tb").forEach(el=>el.onclick=()=>{invTab=el.dataset.t;renderInv();});
+ const tb=invUI.querySelector(".test");if(tb)tb.onclick=()=>{WEAP.tier=(WEAP.tier+1)%7;WEAP.lvl=1;saveWeap();updWeapUI();renderInv();tierUpFX();};}
+function openInv(){invOpen=true;joy.on=false;joy.ix=joy.iy=0;invUI.classList.add("show");renderInv();}
+function closeInv(){invOpen=false;invUI.classList.remove("show");}
+invBtn.addEventListener("pointerdown",e=>{e.stopPropagation();e.preventDefault();openInv();});
+invUI.addEventListener("pointerdown",e=>e.stopPropagation());
 
 const fmtHP=v=>v>=1000?(v/1000).toFixed(2)+"K":String(Math.round(v));
 
@@ -1299,7 +1368,7 @@ fadeEl.innerHTML='<div style="position:absolute;inset:0;display:flex;align-items
 let last=performance.now(),dtLast=0.016,fa=0,fn=0,stt=0;
 setTimeout(()=>{initWorld();last=performance.now();requestAnimationFrame(loop);},30);
 let slowN=0,fastN=0,needResize=false;
-function loop(t){if(needResize){needResize=false;resize();}const dt=Math.max(0,Math.min(0.05,(t-last)/1000));last=t;dtLast=dt;const gs=HITSTOP>0?0.07:1;HITSTOP=Math.max(0,HITSTOP-dt);if(!chestOpen)update(dt*gs);SHAKE*=Math.exp(-dt*11);VIGN*=Math.exp(-dt*3.2);vigEl.style.opacity=VIGN.toFixed(3);render(t);fa+=dt;fn++;stt+=dt;
+function loop(t){if(needResize){needResize=false;resize();}const dt=Math.max(0,Math.min(0.05,(t-last)/1000));last=t;dtLast=dt;const gs=HITSTOP>0?0.07:1;HITSTOP=Math.max(0,HITSTOP-dt);if(!chestOpen&&!invOpen)update(dt*gs);SHAKE*=Math.exp(-dt*11);VIGN*=Math.exp(-dt*3.2);vigEl.style.opacity=VIGN.toFixed(3);render(t);fa+=dt;fn++;stt+=dt;
  if(stt>0.5){const fps=fn/fa;statsEl.textContent=`${statsEl.dataset.sub||""} · FPS ${Math.round(fps)}`;fa=0;fn=0;stt=0;
   slowN=fps<40?slowN+1:0;fastN=fps>57?fastN+1:0;if(slowN>=2&&dprScale>0.55){dprScale=Math.max(0.55,dprScale-0.1);needResize=true;slowN=0;}else if(fastN>=6&&dprScale<1){dprScale=Math.min(1,dprScale+0.05);needResize=true;fastN=0;}}requestAnimationFrame(loop);}
 window.__dbg={get E(){return ENEMIES;},P,get MAP(){return MAP;},get CURR(){return CURR;}};
