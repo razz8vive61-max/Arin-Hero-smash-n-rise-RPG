@@ -42,6 +42,28 @@
   #menudd.show{display:flex}
   #menudd div{padding:11px 14px;font-size:14px;font-weight:700;cursor:pointer;border-bottom:1px solid rgba(255,255,255,.08)}
   #menudd div:last-child{border:none}
+  #invui .grid{display:grid;grid-template-columns:repeat(5,1fr);gap:7px}
+  #invui .cell{aspect-ratio:1;border-radius:11px;background:rgba(0,0,0,.28);border:1.5px solid rgba(255,255,255,.08);position:relative;display:flex;align-items:center;justify-content:center}
+  #invui .cell.it{border-width:2px;cursor:pointer;background:rgba(0,0,0,.4)}
+  #invui .cell.it>b{position:absolute;left:3px;top:3px;font-size:9px;font-weight:900;color:#1a1008;border-radius:4px;padding:0 4px;line-height:13px}
+  #invui .cell.it>em{position:absolute;right:3px;top:2px;font-style:normal;font-size:11px;font-weight:900;color:#6dff7a;text-shadow:0 0 3px #000}
+  #invui .cell .lb{position:absolute;left:5px;right:5px;bottom:4px;height:3px;border-radius:2px;background:rgba(255,255,255,.15);overflow:hidden}
+  #invui .cell .lb i{display:block;height:100%}
+  #invui .det{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:20}
+  #invui .dp{width:min(88vw,340px);background:linear-gradient(#3a2614,#22160b);border:2px solid;border-radius:16px;padding:12px 14px;box-shadow:0 10px 40px rgba(0,0,0,.6)}
+  #invui .dh{display:flex;gap:10px;align-items:center}
+  #invui .dh>div:nth-child(2){flex:1}
+  #invui .dh small{font-size:11px;opacity:.75}
+  #invui .dx{font-style:normal;font-size:18px;opacity:.8;cursor:pointer;align-self:flex-start;padding:0 4px}
+  #invui .rows{display:flex;gap:6px;margin:8px 0}
+  #invui .rows div{flex:1;display:flex;justify-content:space-between;padding:7px 9px;border-radius:8px;background:rgba(255,255,255,.05);font-size:12px}
+  #invui .rows b{color:#ffd35a}
+  #invui .dp .sk{background:rgba(255,211,90,.07);border-radius:8px;padding:7px 9px;font-weight:800}
+  #invui .dp .sk small{display:block;font-weight:400;color:#fff;opacity:.85;margin-top:2px}
+  #invui .go{margin-top:12px;text-align:center;padding:10px 0;border-radius:11px;background:linear-gradient(#f0c35a,#c48a2c);color:#2a1708;font-weight:900;font-size:15px;cursor:pointer;box-shadow:0 3px 0 #7a4e18}
+  #invui .go.dis{background:rgba(255,255,255,.1);color:#6dff7a;box-shadow:none;cursor:default}
+  #invui .tst{display:flex;justify-content:space-between;margin-top:9px;font-size:10.5px;opacity:.55}
+  #invui .tst u{cursor:pointer}
   #modal{position:fixed;inset:0;background:rgba(6,4,2,.72);z-index:11;display:none;align-items:center;justify-content:center;touch-action:none}
   #modal.show{display:flex}
   #modal .panel{width:min(90vw,360px);background:linear-gradient(#3a2614,#22160b);border:2px solid #a8742e;border-radius:16px;padding:14px;color:#fff;box-shadow:0 10px 40px rgba(0,0,0,.6)}
@@ -262,7 +284,7 @@ float smp(vec2 uv,float z){return step(z,unpack(texture2D(uSM,uv)));}
 float bil(vec2 uv,float z){vec2 t=uv*uSMs-0.5;vec2 f=fract(t);vec2 b=(floor(t)+0.5)/uSMs;float s=1.0/uSMs;
  return mix(mix(smp(b,z),smp(b+vec2(s,0.0),z),f.x),mix(smp(b+vec2(0.0,s),z),smp(b+vec2(s,s),z),f.x),f.y);}
 float shadow(float nl){if(uShOn<0.5)return 1.0;vec3 p=vL.xyz/vL.w*0.5+0.5;if(p.x<0.0||p.x>1.0||p.y<0.0||p.y>1.0||p.z>1.0)return 1.0;
- float b=0.0010+0.0025*(1.0-nl);float o=0.9/uSMs;float z=p.z-b;
+ float b=0.0010+0.0025*(1.0-nl)+(vMat>4.5?0.0025:0.0);float o=0.9/uSMs;float z=p.z-b;
  return 0.5*(bil(p.xy+vec2(-o,o*0.4),z)+bil(p.xy+vec2(o,-o*0.4),z));}
 vec2 vor(vec2 p){vec2 i=floor(p),f=fract(p);float d1=8.0,d2=8.0;for(int y=-1;y<=1;y++)for(int x=-1;x<=1;x++){vec2 g=vec2(float(x),float(y));vec2 o=vec2(hash(i+g),hash(i+g+19.19));vec2 r=g+o-f;float d=dot(r,r);if(d<d1){d2=d1;d1=d;}else if(d<d2)d2=d;}return vec2(sqrt(d1),sqrt(d2));}
 vec3 bump(vec3 n,float h,float k){
@@ -359,7 +381,8 @@ let CUR=MAIN;
 function upload(mb){if(!mb.d.length)return null;const b=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(mb.d),gl.STATIC_DRAW);return{b,n:mb.d.length/10};}
 function draw(mesh,m,tint,alpha=1){if(!mesh)return;gl.bindBuffer(gl.ARRAY_BUFFER,mesh.b);
  gl.vertexAttribPointer(0,3,gl.FLOAT,false,40,0);gl.vertexAttribPointer(1,3,gl.FLOAT,false,40,12);gl.vertexAttribPointer(2,4,gl.FLOAT,false,40,24);
- gl.uniformMatrix4fv(CUR.u.uM,false,m||M4.id());if(CUR===MAIN){gl.uniform3fv(MAIN.u.uTint,tint||TINT);gl.uniform1f(MAIN.u.uA,alpha);}gl.drawArrays(gl.TRIANGLES,0,mesh.n);}
+ gl.uniformMatrix4fv(CUR.u.uM,false,m||M4.id());if(CUR===MAIN){gl.uniform3fv(MAIN.u.uTint,tint||TINT);gl.uniform1f(MAIN.u.uA,alpha);}
+ if(mesh.po){gl.enable(gl.POLYGON_OFFSET_FILL);gl.polygonOffset(-2,-6);}if(CUR===OUTP){gl.enable(gl.CULL_FACE);gl.cullFace(gl.FRONT);}gl.drawArrays(gl.TRIANGLES,0,mesh.n);if(mesh.po)gl.disable(gl.POLYGON_OFFSET_FILL);if(CUR===OUTP)gl.disable(gl.CULL_FACE);}
 let TINT=[1,1,1];
 // shadow map
 const SMS=2048;let shadowOK=false;const smTex=gl.createTexture(),smFB=gl.createFramebuffer(),smRB=gl.createRenderbuffer();
@@ -1845,7 +1868,7 @@ function renderPreview(t){gl.disable(gl.SCISSOR_TEST);gl.viewport(0,0,glc.width,
  {const bl=bowLight();gl.uniform3fv(u.uL2p,bl[0]);gl.uniform3fv(u.uL2c,bl[1]);}
  gl.disable(gl.BLEND);gl.depthMask(true);draw(PED,pedM);for(const [m,mx] of chars)draw(m,mx,[1,1,1]);
  gl.uniform1f(u.uShOn,0);draw(PEDR,M4.T(P.x,gy+0.002,P.z),[tcv[0]*1.2,tcv[1]*1.2,tcv[2]*1.2]);
- CUR=OUTP;gl.useProgram(OUTP.p);gl.uniformMatrix4fv(OUTP.u.uVP,false,VPp);gl.uniform3fv(OUTP.u.uEye,ey);gl.uniform1f(OUTP.u.uW,0.009);gl.uniform3fv(OUTP.u.uCol,[0.12,0.07,0.04]);
+ CUR=OUTP;gl.useProgram(OUTP.p);gl.uniformMatrix4fv(OUTP.u.uVP,false,VPp);gl.uniform3fv(OUTP.u.uEye,ey);gl.uniform1f(OUTP.u.uW,0.013);gl.uniform3fv(OUTP.u.uCol,[0.12,0.07,0.04]);
  for(const [m,mx] of chars)if(m&&m.ol)draw(m,mx);
  CUR=MAIN;gl.useProgram(MAIN.p);gl.uniform1f(u.uStudio,0);gl.disable(gl.SCISSOR_TEST);gl.viewport(0,0,glc.width,glc.height);
  // soft spotlight haze and glow around the pedestal
@@ -1878,6 +1901,36 @@ function renderModal(kind){let body="";
  const sv=modal.querySelector(".save");if(sv)sv.onclick=()=>{const v=modal.querySelector("#nkin").value.trim().slice(0,16);if(v){PROF.nick=v;saveProf();updHUD();}sv.textContent="Kaydedildi ✓";};}
 modal.addEventListener("pointerdown",e=>{e.stopPropagation();if(e.target===modal)closeModal();});
 modal.addEventListener("keydown",e=>e.stopPropagation());
+
+// ---- inventory grid: auto-growing slots, tap an item for details ----
+let INV_DET=null;
+function invItems(){return Object.keys(WNAME).filter(k=>CHEST.own[k]).map(k=>({k,type:"weapon"}));}
+const invHero=renderInv;
+renderInv=function(){invHero();if(invTab!=="w")return;
+ const tb=invUI.querySelector('.tb[data-t="w"]');if(tb)tb.textContent="Envanter";
+ const items=invItems(),n=items.length,slots=Math.max(20,Math.ceil(n/5)*5);let cells="";
+ for(let i=0;i<slots;i++){const it=items[i];if(!it){cells+='<div class="cell"></div>';continue;}const s=WSTATE[it.k],c=TIER_COL[s.tier],pct=s.tier===6&&s.lvl>=100?100:s.lvl;
+  cells+=`<div class="cell it" data-k="${it.k}" style="border-color:${c};box-shadow:inset 0 0 12px ${c}55">${wIcon(it.k,c)}<b style="background:${c}">${s.tier+1}</b>${it.k===EQ?'<em>✓</em>':''}<i class="lb"><i style="width:${pct}%;background:${c}"></i></i></div>`;}
+ invUI.querySelector(".bd").innerHTML=`<div class="grid">${cells}</div><p class="note">${n} eşya · Envanter doldukça yeni satırlar kendiliğinden açılır.</p>`;
+ invUI.querySelectorAll(".cell.it").forEach(el=>el.onclick=()=>{INV_DET=el.dataset.k;renderDet();});
+ if(INV_DET)renderDet();};
+function renderDet(){let d=invUI.querySelector(".det");if(!INV_DET){if(d)d.remove();return;}if(!d){d=document.createElement("div");d.className="det";invUI.appendChild(d);}
+ const k=INV_DET,s=WSTATE[k],c=TIER_COL[s.tier],A=k==="staff"?STAFF_ATK[s.tier]:WATK[k],max=s.tier===6&&s.lvl>=100;
+ const tiers=TIER_NAMES.map((nm,i)=>`<span style="background:${TIER_COL[i]};opacity:${i<=s.tier?1:0.28}" title="${nm}">${i+1}</span>`).join("");
+ d.innerHTML=`<div class="dp" style="border-color:${c}"><div class="dh"><div class="ic" style="border-color:${c};box-shadow:0 0 12px ${c}88">${wIcon(k,c)}</div><div><div class="nm" style="color:${c}">${weapName(k)}</div><small>${TIER_NAMES[s.tier]} · Kademe ${s.tier+1}/7</small></div><i class="dx">✕</i></div>
+  <div class="bar"><i style="width:${max?100:s.lvl}%;background:${c}"></i></div><div class="st">Sv ${s.lvl}${max?" · MAKS":" / 100"}</div>
+  <div class="rows"><div><span>Hasar</span><b>${weapDamage(k)}</b></div><div><span>Menzil</span><b>${A.range} m</b></div></div>
+  <div class="sk">✦ ${SKILLS[k][s.tier].n}<small>${SKILLS[k][s.tier].d}</small></div>
+  <div class="sec">Kademeler</div><div class="tiers">${tiers}</div>
+  ${k===EQ?'<div class="go dis">Kuşanıldı</div>':'<div class="go">Kuşan</div>'}
+  <div class="tst"><u class="t1">Test: kademe +1</u><u class="t2">Test: tüm silahlar</u></div></div>`;
+ d.onpointerdown=e=>{if(e.target===d){INV_DET=null;d.remove();}};
+ d.querySelector(".dx").onclick=()=>{INV_DET=null;d.remove();};
+ const go=d.querySelector(".go:not(.dis)");if(go)go.onclick=()=>{equip(k);renderInv();};
+ d.querySelector(".t1").onclick=()=>{const was=EQ;equip(k);WEAP.tier=(WEAP.tier+1)%7;WEAP.lvl=1;saveWeap();updWeapUI();if(was!==k)equip(was);renderInv();if(k===EQ)tierUpFX();};
+ d.querySelector(".t2").onclick=()=>{for(const q in CHEST.own)CHEST.own[q]=true;saveChest();renderInv();};}
+const closeInvBase=closeInv;closeInv=function(){INV_DET=null;closeInvBase();};
+PT.face.po=true;
 
 // ================= tablet slots =================
 const TABS=["Ateş","Rüzgâr","Kan","Taş","Gölge","Ses","Ad"];
