@@ -701,7 +701,7 @@ const SPEED=3.0;
 function characterParts(){
  const amt=Math.min(1,P.spd/SPEED),ph=P.phase,out=[];
  const bob=P.moving?(Math.abs(Math.cos(ph))*0.035-0.022)*amt:0;
- const SP=weapPose(P.atk>0?Math.min(1,P.atk):0);let base=M4.chain(M4.T(P.x,(MAP?groundY(P.x,P.z):0)+SP.lift,P.z),M4.Ry(P.yaw),M4.S(0.95,0.95,0.95));const punch=0;
+ const SP=weapPose(P.atk>0?Math.min(1,P.atk):0);let base=M4.chain(M4.T(P.x,(MAP?groundY(P.x,P.z):0)+SP.lift,P.z),M4.Ry(P.yaw+(SP.spin||0)),M4.S(0.95,0.95,0.95));const punch=0;
  if(typeof PL!=='undefined'&&PL.dead>0)base=M4.chain(base,M4.Rx(-Math.min(1,PL.dead/0.5)*1.45));
  const breathe=1+Math.sin(performance.now()/650)*0.015*(1-amt);
  const pelvis=M4.chain(base,M4.T(0,HIPY+bob,0),M4.Ry(Math.sin(ph)*0.08*amt));
@@ -719,7 +719,7 @@ function characterParts(){
   const p=ph+Math.PI;const sw=Math.sin(p)*0.5*amt;const elbow=0.2+Math.max(0,Math.sin(p))*0.35*amt;
   const um=M4.chain(torso,M4.T(side*0.225,0.33,0),M4.Rz(side*0.12),M4.Rx(-sw));out.push([PT.upperArm,um]);
   out.push([PT.lowerL,M4.chain(um,M4.T(0,-UA,0),M4.Rx(-elbow))]);}
- out.push([WMODELS[EQ][WEAP.tier],M4.chain(torso,M4.T(G[0],G[1],G[2]),M4.Ry(SP.ry),M4.Rz(SP.rz),M4.Rx(SP.rx),EQ==="dagger"?M4.S(1.45,1.45,1.45):M4.id())]);}
+ {const wm=M4.chain(torso,M4.T(G[0],G[1],G[2]),M4.Ry(SP.ry),M4.Rz(SP.rz),M4.Rx(SP.rx),EQ==="dagger"?M4.S(1.45,1.45,1.45):M4.id());out.push([WMODELS[EQ][WEAP.tier],wm]);P.weapW=M4.xp(wm,[0,EQ==="dagger"?0.3:0.8,0]);}}
  const hm=M4.chain(torso,M4.T(0,0.71,0.01),M4.S(1.24,1.24,1.24),M4.Rx(-0.05*amt+Math.sin(ph*2)*0.02*amt));
  out.push([PT.head,hm]);out.push([PT.face,hm]);out.push([PT.hair,hm]);
  return out;}
@@ -882,8 +882,8 @@ let EQ="staff",WSTATE={staff:{tier:0,lvl:1},hammer:{tier:0,lvl:1},dagger:{tier:0
 try{const s=JSON.parse(localStorage.getItem("arin_weap2")||"null");if(s&&s.s){WSTATE=Object.assign(WSTATE,s.s);EQ=s.eq||"staff";}else{const w=JSON.parse(localStorage.getItem("arin_weap")||"null");if(w&&typeof w.tier==="number")WSTATE.staff={tier:w.tier,lvl:w.lvl};}}catch(e){}
 WEAP=WSTATE[EQ];
 function saveWeap(){try{localStorage.setItem("arin_weap2",JSON.stringify({eq:EQ,s:WSTATE}));}catch(e){}}
-const curAtk=()=>EQ==="staff"?STAFF_ATK[WEAP.tier]:WATK[EQ];
-const atkCd=()=>EQ==="staff"?Math.max(0.7,STAFF_ATK[WEAP.tier].dur+0.12):WATK[EQ].cd;
+let curAtk=()=>EQ==="staff"?STAFF_ATK[WEAP.tier]:WATK[EQ];
+let atkCd=()=>EQ==="staff"?Math.max(0.7,STAFF_ATK[WEAP.tier].dur+0.12):WATK[EQ].cd;
 function weapDamage(type=EQ){const s=WSTATE[type],f=WFACT[type];return Math.max(1,Math.round(STAFF_DMG.base[s.tier]*f))+Math.max(1,Math.round(STAFF_DMG.per[s.tier]*f))*(s.lvl-1);}
 const weapName=(t=EQ)=>TIER_NAMES[WSTATE[t].tier]+" "+WNAME[t];
 function equip(t){EQ=t;WEAP=WSTATE[t];P.atk=0;saveWeap();updWeapUI();}
@@ -990,8 +990,8 @@ function updArrows(dt){const SPD=15;
  ARROWS=ARROWS.filter(a=>!a.done);
  // burning enemies
  for(const e of ENEMIES){if(!e.burn||e.state==="dead"){if(e.state==="dead")e.burn=null;continue;}e.burn.t-=dt;e.burn.tick+=dt;
-  if(Math.random()<dt*14)FX.push({k:"spark",x:e.x+(Math.random()-0.5)*0.4,y:0.5+Math.random()*0.9,z:e.z+(Math.random()-0.5)*0.4,vx:0,vy:rnd(0.8,1.8),vz:0,t:0,life:0.45,col:"255,130,50",up:true});
-  if(e.burn.tick>=0.5){e.burn.tick-=0.5;damageEnemy(e,Math.max(1,Math.round(e.burn.dps*0.5)),false,{dot:true});}if(e.burn.t<=0)e.burn=null;}
+  if(Math.random()<dt*14)FX.push({k:"spark",x:e.x+(Math.random()-0.5)*0.4,y:0.5+Math.random()*0.9,z:e.z+(Math.random()-0.5)*0.4,vx:0,vy:rnd(0.8,1.8),vz:0,t:0,life:0.45,col:e.burn.kind==="bleed"?"220,40,40":"255,130,50",up:e.burn.kind!=="bleed"});
+  if(e.burn.tick>=0.5){e.burn.tick-=0.5;damageEnemy(e,Math.max(1,Math.round(e.burn.dps*0.5)),false,{dot:true,col:e.burn.kind==="bleed"?"#ff4a4a":"#ff9a40"});}if(e.burn.t<=0)e.burn=null;}
  // the aim pose: bow raised while there is something to shoot
  P.aim+=(((EQ==="bow"&&(PL.target||P.atk>0))?1:0)-P.aim)*Math.min(1,dt*8);}
 function arrowParts(){return ARROWS.filter(a=>!(a.rain&&a.delay>0)).map(a=>[ARROW[a.tier],a.rain?M4.chain(M4.T(a.x,a.y,a.z),M4.Rx(Math.PI)):M4.chain(M4.T(a.x,a.y,a.z),M4.Ry(a.yaw||0),M4.Rx(Math.PI/2-(a.pitch||0)))]);}
@@ -1007,6 +1007,103 @@ function drawArrowFX(){oc.globalCompositeOperation="lighter";
 function bowLight(){// one coloured light for the shader: a glowing arrow in flight, else the glowing bow
  for(let k=ARROWS.length-1;k>=0;k--){const a=ARROWS[k];if(a.tier>=4&&!(a.rain&&a.delay>0)){const c=ARROW_RGB[a.tier].split(",").map(v=>v/255*1.2);return[[a.x,a.y,a.z],c];}}
  if(EQ==="bow"&&WEAP.tier>=4&&P.bowW){const c=ARROW_RGB[WEAP.tier].split(",").map(v=>v/255*(WEAP.tier===6?0.7:0.4));return[P.bowW,c];}return[[0,-99,0],[0,0,0]];}
+
+// ================= melee tiers: per-tier moves and exclusive skills (staff, hammer, dagger) =================
+const SKILLS={
+ staff:[{n:"Sersemletme",d:"Vuruşlar %20 ihtimalle düşmanı 1 sn sersemletir"},{n:"Kızıl Kıvılcım",d:"Savuruş düşmanları 2 sn yakar"},{n:"Hilal Dalgası",d:"Dalga düşmanları geriye savurur"},
+  {n:"Üç Diş",d:"Saplama her düşmana 3 kez vurur"},{n:"Kristal Diken",d:"Her 3. saldırıda etrafından kristal dikenler fışkırır"},{n:"Yıldız Mührü",d:"Mühür 2 sn yerde kalır, içindekileri yakar ve yavaşlatır"},{n:"Göksel Sütunlar",d:"Her 4. saldırıda 3 düşmana ışık sütunu iner, vurdukça can verir"}],
+ hammer:[{n:"Sarsıntı",d:"Vuruşlar %25 ihtimalle düşmanı sersemletir"},{n:"Savurma",d:"Yatay savuruş düşmanları uzağa fırlatır"},{n:"Aslan Kükremesi",d:"Zıplayıp iner, etrafına şok halkası yayar"},
+  {n:"Kasırga",d:"360° döner, etraftaki herkese iki kez vurur"},{n:"Kristal Sütunlar",d:"Önündeki hatta obsidyen sütunlar fışkırır"},{n:"Deprem",d:"Her 3. vuruşta büyük deprem, herkes sersemler"},{n:"Meteor",d:"Her 3. vuruşta gökten iner, yanan ışık krateri bırakır"}],
+ dagger:[{n:"Kemik Kesiği",d:"%15 ihtimalle ikinci kez vurur"},{n:"Kanama",d:"Düşman 3 sn kanar"},{n:"Altın Yaprak",d:"Kavisli kesik öndeki birkaç düşmana birden değer"},
+  {n:"Çapraz Kesik",d:"Üçlü kombo; her 3. saldırıda X kesiği, +%60 hasar"},{n:"Gölge Adımı",d:"Her 4. saldırıda düşmanın arkasına ışınlanır, kesin kritik"},{n:"Yıldız Dansı",d:"Her 4. saldırıda dönerek etraftakilere 4 kez vurur"},{n:"Işık Sıçraması",d:"Her 4. saldırıda 5 düşman arasında ışık hızında sıçrar"}],
+ bow:BOW_SKILL};
+const HAM_ATK=[0.85,0.8,0.95,0.9,0.9,1.0,1.1];
+const DAG_ATK=[{dur:0.26,hits:[0.5]},{dur:0.42,hits:[0.3,0.7]},{dur:0.32,hits:[0.55]},{dur:0.55,hits:[0.28,0.55,0.82]},{dur:0.32,hits:[0.55]},{dur:0.5,hits:[0.3,0.5,0.7,0.9]},{dur:0.5,hits:[0.55]}];
+curAtk=function(){const t=WEAP.tier;if(EQ==="staff")return STAFF_ATK[t];if(EQ==="hammer")return{dur:HAM_ATK[t],range:1.9};if(EQ==="dagger")return{dur:DAG_ATK[t].dur,range:1.5};return WATK.bow;};
+atkCd=function(){const t=WEAP.tier;if(EQ==="staff")return Math.max(0.7,STAFF_ATK[t].dur+0.12);if(EQ==="hammer")return 1.4;if(EQ==="dagger")return Math.max(0.3,DAG_ATK[t].dur+0.06);return 0.8;};
+function hitTimes(){if(EQ==="bow")return[0.55];if(EQ==="dagger"){const t=WEAP.tier;if(t===5&&!P.special)return[0.55];return DAG_ATK[t].hits;}return[EQ==="hammer"?0.55:0.5];}
+function isSpecial(type,t,n){if(type==="staff")return(t===4&&n%3===0)||(t===6&&n%4===0);if(type==="hammer")return(t===5||t===6)&&n%3===0;if(type==="dagger")return(t===3&&n%3===0)||(t>=4&&n%4===0);return false;}
+P.atkN=0;P.special=false;P.hitIdx=0;let ZONES=[];
+// ---- poses ----
+function hammerPose(t,a){const ez=x=>x*x*(3-2*x),w=a<0.5?ez(a/0.5):1,s=a<0.5?0:a<0.65?ez((a-0.5)/0.15):1,k=1-(a<0.75?0:ez((a-0.75)/0.25));const P0={rx:0.1,ry:0,rz:0,gx:0,gy:0,gz:0,tw:0,lift:0,spin:0};if(a<=0)return P0;
+ const L=o=>{const r={...P0};for(const q in o)r[q]=o[q]*(q==="spin"?1:k);return r;};
+ switch(t){case 0:return L({rx:-1.6*w*(1-s)+1.55*s,gy:0.3*w*(1-s),gz:0.18*s,tw:0.25*s,lift:0.05*w*(1-s)});
+  case 1:return L({rz:1.35*Math.min(1,w*1.5),ry:1.3*w-2.6*s,gy:0.1,tw:0.5*w-0.9*s});
+  case 2:return L({rx:-1.6*w*(1-s)+1.55*s,gy:0.3*w*(1-s),gz:0.15*s,lift:0.55*w*(1-s)});
+  case 3:return L({rz:1.4*Math.min(1,w*2),ry:0.5*w,gy:0.08,spin:s*Math.PI*2});
+  case 4:return L({rx:-1.8*w*(1-s)+1.7*s,gy:0.35*w*(1-s),gz:0.2*s,tw:0.3*s,lift:0.08*w*(1-s)});
+  case 5:return L({rx:0.3*w*(1-s)+1.55*s,gy:0.6*w*(1-s),gz:0.15*s,lift:(P.special?0.2:0.05)*w*(1-s)});
+  default:return L({rx:-1.2*w*(1-s)+1.6*s,gy:0.4*w*(1-s),gz:0.15*s,lift:(P.special?1.1:0.15)*w*(1-s)});}}
+function daggerPose(t,a){const ez=x=>x*x*(3-2*x);const P0={rx:0.9,ry:0,rz:0,gx:0,gy:-0.05,gz:0,tw:0,lift:0,spin:0};if(a<=0)return P0;
+ const stab=(b,side=1)=>{const w=b<0.45?ez(b/0.45):1,s=b<0.45?0:b<0.6?ez((b-0.45)/0.15):1,k=1-(b<0.7?0:ez((b-0.7)/0.3));return{rx:1.5,ry:0,rz:0,gx:0.02*side,gy:-0.02,gz:(-0.15*w*(1-s)+0.5*s)*k,tw:(-0.3*w+0.45*s)*k*side,lift:0,spin:0};};
+ const slash=(b,dir=1)=>{const w=b<0.4?ez(b/0.4):1,s=b<0.4?0:b<0.6?ez((b-0.4)/0.2):1,k=1-(b<0.7?0:ez((b-0.7)/0.3));return{rx:0.9,ry:(1.1*w-2.2*s)*dir*k,rz:1.1*dir*Math.min(1,w*2)*k,gx:0,gy:0.06,gz:0.15*s*k,tw:(0.5*w-0.8*s)*dir*k,lift:0,spin:0};};
+ switch(t){case 0:return stab(a);case 1:return stab((a*2)%1,a<0.5?1:-1);case 2:return slash(a);case 3:{const i=Math.min(2,Math.floor(a*3));return slash((a*3)%1,i%2?-1:1);}
+  case 4:return stab(a);case 5:{if(!P.special)return slash(a);const r=slash((a*4)%1,1);r.spin=a*Math.PI*4;return r;}
+  default:{const r=stab(a);if(P.special){r.lift=0.15*Math.sin(a*Math.PI);r.gz+=0.2;}return r;}}}
+weapPose=(function(old){return function(a){if(EQ==="hammer")return hammerPose(WEAP.tier,a);if(EQ==="dagger")return daggerPose(WEAP.tier,a);const r=old(a);r.spin=0;return r;};})(weapPose);
+// ---- helpers ----
+const tcol=()=>ARROW_RGB[WEAP.tier];
+function roll(mult=1,critBonus=0){const crit=Math.random()<(EQ==="dagger"?0.25:0.15)+critBonus;let d=Math.round(weapDamage()*mult*(0.9+Math.random()*0.2));if(crit)d*=2;return[d,crit];}
+function inCircle(x,z,r,f){for(const e of ENEMIES){if(e.state==="dead")continue;if(Math.hypot(e.x-x,e.z-z)<r+ETYPE[e.t].r)f(e);}}
+function inCone(r,ang,dx,dz,f){for(const e of ENEMIES){if(e.state==="dead")continue;const ex=e.x-P.x,ez=e.z-P.z,d=Math.hypot(ex,ez);if(d>r+ETYPE[e.t].r)continue;if(Math.acos(Math.max(-1,Math.min(1,(ex*dx+ez*dz)/(d||1))))<ang)f(e);}}
+function push(e,amt){const dx=e.x-P.x,dz=e.z-P.z,l=Math.hypot(dx,dz)||1;for(let k=0;k<4;k++){const s=amt/4;if(eFree(e,e.x+dx/l*s,e.z+dz/l*s)){e.x+=dx/l*s;e.z+=dz/l*s;}}}
+const stun=(e,t)=>{e.stun=Math.max(e.stun||0,t);};
+const dot=(e,t,dps,kind)=>{e.burn={t,dps:Math.max(1,dps),acc:0,tick:0,kind};};
+function heal(n){if(n<=0)return;PL.hp=Math.min(PL.hpMax,PL.hp+n);addFloat(P.x,2.1,P.z,"+"+n,"#6dff7a",false);}
+function tdir(){const tg=PL.target;let dx=Math.sin(P.yaw),dz=Math.cos(P.yaw);if(tg){const l=Math.hypot(tg.x-P.x,tg.z-P.z)||1;dx=(tg.x-P.x)/l;dz=(tg.z-P.z)/l;}return[dx,dz];}
+// ---- staff skills (after the tier's normal area hit) ----
+function staffSkill(hits,cx,cz,dx,dz){const t=WEAP.tier,lv=1+WEAP.lvl/100;
+ if(t===0)for(const e of hits)if(Math.random()<0.2)stun(e,1.0);
+ if(t===1)for(const e of hits)dot(e,2,Math.round(weapDamage()*0.25*lv),"burn");
+ if(t===2)for(const e of hits)push(e,0.9);
+ if(t===3)for(const e of hits)for(let k=0;k<2;k++){const[d,c]=roll(0.45);damageEnemy(e,d,c,{nokb:true});}
+ if(t===4&&P.special){const[d,c]=roll(0.9);inCircle(P.x,P.z,2.3,e=>damageEnemy(e,d,c,{nokb:true}));for(let k=0;k<10;k++){const a=k/10*6.283,r=1.2+Math.random()*0.9;FX.push({k:"spike",x:P.x+Math.cos(a)*r,y:0,z:P.z+Math.sin(a)*r,t:0,life:0.55,h:0.6+Math.random()*0.6,col:"180,110,255"});}FX.push({k:"ring",x:P.x,y:0.05,z:P.z,t:0,life:0.5,r0:0.4,r1:2.5,col:"190,120,255"});SHAKE=Math.max(SHAKE,0.15);}
+ if(t===5)ZONES.push({x:cx,z:cz,r:2.0,t:2,tick:0,dps:Math.round(weapDamage()*0.3*lv),slow:true,kind:"seal"});
+ if(t===6&&P.special){const near=ENEMIES.filter(e=>e.state!=="dead"&&Math.hypot(e.x-P.x,e.z-P.z)<6).sort(()=>Math.random()-0.5).slice(0,3);let n=0;
+  for(const e of near){FX.push({k:"pillar",x:e.x,y:0,z:e.z,t:0,life:0.7,r:0.8});const[d,c]=roll(1.2);inCircle(e.x,e.z,1.0,q=>{damageEnemy(q,d,c,{nokb:true});n++;});}heal(Math.round(PL.hpMax*0.01*n));SHAKE=Math.max(SHAKE,0.2);}}
+// ---- hammer ----
+function hammerStrike(){const t=WEAP.tier,tg=PL.target,[dx,dz]=tdir(),lv=1+WEAP.lvl/100;const cx=tg?tg.x:P.x+dx*1.2,cz=tg?tg.z:P.z+dz*1.2;const col=tcol();
+ const hitR=(x,z,r,mult,o={})=>{const[d,c]=roll(mult);const hs=[];inCircle(x,z,r,e=>{damageEnemy(e,d,c,o);hs.push(e);});return hs;};
+ if(t===0){const hs=hitR(cx,cz,1.3,1);for(const e of hs)if(Math.random()<0.25)stun(e,0.8);FX.push({k:"ring",x:cx,y:0.05,z:cz,t:0,life:0.45,r0:0.3,r1:1.6,col:"230,205,160"});fxChunks(cx,0.2,cz,8,["#b89a6a","#8d8a84"],3,1);fxSmoke(cx,0.2,cz,4,"200,185,150");SHAKE=Math.max(SHAKE,0.16);}
+ else if(t===1){const[d,c]=roll(1);inCone(2.4,1.2,dx,dz,e=>{damageEnemy(e,d,c,{kb:0.2});push(e,1.6*lv);});FX.push({k:"slash",x:P.x,y:0.9,z:P.z,yaw:Math.atan2(dx,dz),t:0,life:0.28,col,R:2.3,sw:2.8});SHAKE=Math.max(SHAKE,0.14);}
+ else if(t===2){hitR(P.x,P.z,2.2,1.1,{kb:0.6});FX.push({k:"ring",x:P.x,y:0.05,z:P.z,t:0,life:0.5,r0:0.3,r1:2.6,col:"255,214,110"});FX.push({k:"ring",x:P.x,y:0.05,z:P.z,t:0,life:0.7,r0:0.2,r1:3.0,col:"255,240,190"});fxSparks(P.x,0.4,P.z,14,"255,214,110",5);SHAKE=Math.max(SHAKE,0.2);}
+ else if(t===3){hitR(P.x,P.z,2.0,0.8);const[d,c]=roll(0.8);setTimeout(()=>inCircle(P.x,P.z,2.0,e=>damageEnemy(e,d,c,{nokb:true})),160);FX.push({k:"slash",x:P.x,y:0.8,z:P.z,yaw:0,t:0,life:0.35,col:"215,225,240",R:2.0,sw:6.2});fxSparks(P.x,0.8,P.z,12,"215,225,240",5);}
+ else if(t===4){hitR(cx,cz,1.4,1);const[d,c]=roll(0.8);for(let k=1;k<=4;k++){const px=P.x+dx*k*0.9,pz=P.z+dz*k*0.9;setTimeout(()=>{inCircle(px,pz,0.8,e=>damageEnemy(e,d,c,{nokb:true}));for(let q=0;q<3;q++)FX.push({k:"spike",x:px+(Math.random()-0.5)*0.6,y:0,z:pz+(Math.random()-0.5)*0.6,t:0,life:0.6,h:0.8+Math.random()*0.7,col:"180,110,255"});fxChunks(px,0.3,pz,3,["#b46cff","#2a2236"],2,0.9);},k*70);}SHAKE=Math.max(SHAKE,0.16);}
+ else if(t===5){hitR(cx,cz,1.5,1);if(P.special){const[d,c]=roll(1.4);inCircle(P.x,P.z,3.2,e=>{damageEnemy(e,d,c,{nokb:true});stun(e,1.0);});FX.push({k:"ring",x:P.x,y:0.05,z:P.z,t:0,life:0.7,r0:0.5,r1:3.6,col:"110,150,255"});FX.push({k:"seal",x:P.x,y:0.06,z:P.z,t:0,life:0.8,r:3.0});fxChunks(P.x,0.3,P.z,14,["#2b4fae","#e2b247","#8d8a84"],4,1.2);SHAKE=Math.max(SHAKE,0.32);HITSTOP=Math.max(HITSTOP,0.08);}
+  else{FX.push({k:"ring",x:cx,y:0.05,z:cz,t:0,life:0.45,r0:0.3,r1:1.8,col:"110,150,255"});SHAKE=Math.max(SHAKE,0.15);}}
+ else{hitR(cx,cz,1.6,1);if(P.special){const[d,c]=roll(1.6);inCircle(cx,cz,3.5,e=>damageEnemy(e,d,c,{kb:0.8}));FX.push({k:"pillar",x:cx,y:0,z:cz,t:0,life:0.6,r:1.4});FX.push({k:"ring",x:cx,y:0.05,z:cz,t:0,life:0.8,r0:0.5,r1:4.0,col:"255,236,170"});
+   ZONES.push({x:cx,z:cz,r:2.2,t:2.5,tick:0,dps:Math.round(weapDamage()*0.35*lv),kind:"crater"});fxChunks(cx,0.4,cz,16,["#fff3cf","#e2b247","#8d8a84"],5,1.3);SHAKE=Math.max(SHAKE,0.38);HITSTOP=Math.max(HITSTOP,0.1);}
+  else{FX.push({k:"ring",x:cx,y:0.05,z:cz,t:0,life:0.45,r0:0.3,r1:2.0,col:"255,236,170"});SHAKE=Math.max(SHAKE,0.16);}}}
+// ---- dagger ----
+function daggerStrike(i){const t=WEAP.tier,tg=PL.target;if(!tg||tg.state==="dead")return;const[dx,dz]=tdir(),col=tcol(),lv=1+WEAP.lvl/100;const yaw=Math.atan2(dx,dz);
+ if(t===0){const[d,c]=roll(1);damageEnemy(tg,d,c);if(Math.random()<0.15)setTimeout(()=>{if(tg.state!=="dead"){const[d2,c2]=roll(1);damageEnemy(tg,d2,c2,{nokb:true});}},90);FX.push({k:"thrust",x:P.x,y:1,z:P.z,yaw,t:0,life:0.14,short:true,col});}
+ else if(t===1){const[d,c]=roll(1);damageEnemy(tg,d,c);dot(tg,3,Math.round(weapDamage()*0.35*lv),"bleed");FX.push({k:"thrust",x:P.x+dz*(i?0.15:-0.15),y:1,z:P.z-dx*(i?0.15:-0.15),yaw,t:0,life:0.14,short:true,col});}
+ else if(t===2){const[d,c]=roll(1);inCone(1.9,0.9,dx,dz,e=>damageEnemy(e,d,c));FX.push({k:"slash",x:P.x,y:1,z:P.z,yaw,t:0,life:0.22,col,R:1.5,sw:2.2});}
+ else if(t===3){const m=P.special?1.6:1;const[d,c]=roll(m);damageEnemy(tg,d,c,{nokb:i<2});FX.push({k:"slash",x:P.x,y:1,z:P.z,yaw:yaw+(i%2?0.6:-0.6),t:0,life:0.18,col,R:1.3,sw:1.6});
+  if(P.special&&i===2){FX.push({k:"flash",x:tg.x,y:1,z:tg.z,t:0,life:0.2,crit:true});SHAKE=Math.max(SHAKE,0.1);}}
+ else if(t===4){const[d,c]=P.special?(()=>{const r=roll(1);return[r[1]?r[0]:r[0]*2,true];})():roll(1);damageEnemy(tg,d,c);FX.push({k:"thrust",x:P.x,y:1,z:P.z,yaw,t:0,life:0.16,short:true,col});}
+ else if(t===5){if(P.special){const[d,c]=roll(0.7);inCircle(P.x,P.z,1.8,e=>damageEnemy(e,d,c,{nokb:true}));FX.push({k:"slash",x:P.x,y:1,z:P.z,yaw:yaw+i*1.57,t:0,life:0.2,col,R:1.6,sw:3.2});}
+  else if(i===0){const[d,c]=roll(1);damageEnemy(tg,d,c);FX.push({k:"slash",x:P.x,y:1,z:P.z,yaw,t:0,life:0.2,col,R:1.4,sw:2.0});}}
+ else{if(P.special){lightDash();}else{const[d,c]=roll(1);damageEnemy(tg,d,c);FX.push({k:"thrust",x:P.x,y:1,z:P.z,yaw,t:0,life:0.16,short:true,col});}}}
+function shadowStep(){const tg=PL.target;if(!tg)return;const[dx,dz]=tdir();const nx=tg.x+dx*0.9,nz=tg.z+dz*0.9;if(!free(nx,nz))return;
+ fxSmoke(P.x,0.8,P.z,6,"60,30,90");P.x=nx;P.z=nz;P.yaw=P.tYaw=Math.atan2(tg.x-nx,tg.z-nz);fxSmoke(P.x,0.8,P.z,6,"60,30,90");fxSparks(P.x,1,P.z,8,"185,110,255",4);}
+function lightDash(){let cur={x:P.x,z:P.z};const path=[[P.x,P.z]],done=new Set();const[d,c]=roll(1.3);
+ for(let k=0;k<5;k++){let best=null,bd=5;for(const e of ENEMIES){if(e.state==="dead"||done.has(e))continue;const q=Math.hypot(e.x-cur.x,e.z-cur.z);if(q<bd){bd=q;best=e;}}if(!best)break;done.add(best);damageEnemy(best,d,c,{nokb:true});path.push([best.x,best.z]);cur=best;}
+ if(path.length>1){FX.push({k:"dash",pts:path,t:0,life:0.45});const last=path[path.length-1],prev=path[path.length-2],l=Math.hypot(last[0]-prev[0],last[1]-prev[1])||1,nx=last[0]+(last[0]-prev[0])/l*0.8,nz=last[1]+(last[1]-prev[1])/l*0.8;if(free(nx,nz)){P.x=nx;P.z=nz;}SHAKE=Math.max(SHAKE,0.14);}}
+// ---- strike dispatch ----
+weapStrike=function(i=0){if(EQ==="staff")return staffStrike();if(EQ==="bow")return bowRelease();if(EQ==="hammer")return hammerStrike();return daggerStrike(i);};
+function startAttack(){P.atkN++;P.special=isSpecial(EQ,WEAP.tier,P.atkN);P.hitIdx=0;if(EQ==="dagger"&&WEAP.tier===4&&P.special)shadowStep();}
+function updZones(dt){for(const z of ZONES){z.t-=dt;z.tick+=dt;if(z.tick>=0.5){z.tick-=0.5;inCircle(z.x,z.z,z.r,e=>{damageEnemy(e,Math.max(1,Math.round(z.dps*0.5)),false,{dot:true});if(z.slow)e.slow=0.6;});}}ZONES=ZONES.filter(z=>z.t>0);}
+function drawZones(){for(const z of ZONES){const[s,ppm]=ppmAt(z.x,0.06,z.z);if(s[2]<0)continue;const a=Math.min(1,z.t*1.5),R=z.r*ppm,rot=performance.now()/900;oc.save();oc.globalAlpha=0.75*a;oc.translate(s[0],s[1]);oc.scale(1,0.56);
+  if(z.kind==="seal"){oc.strokeStyle="rgba(120,160,255,1)";oc.lineWidth=2.5;oc.beginPath();oc.arc(0,0,R,0,7);oc.stroke();oc.strokeStyle="rgba(255,215,110,1)";oc.beginPath();for(let k=0;k<16;k++){const an=rot+k/16*6.283,rr=k%2?R*0.42:R*0.95;k?oc.lineTo(Math.cos(an)*rr,Math.sin(an)*rr):oc.moveTo(Math.cos(an)*rr,Math.sin(an)*rr);}oc.closePath();oc.stroke();oc.fillStyle="rgba(90,130,255,.18)";oc.fill();}
+  else{const g=oc.createRadialGradient(0,0,0,0,0,R);g.addColorStop(0,"rgba(255,245,200,.7)");g.addColorStop(0.6,"rgba(255,190,80,.35)");g.addColorStop(1,"rgba(255,150,40,0)");oc.globalCompositeOperation="lighter";oc.fillStyle=g;oc.beginPath();oc.arc(0,0,R,0,7);oc.fill();oc.globalCompositeOperation="source-over";}
+  oc.restore();}
+ // stunned enemies: little circling stars
+ const tn=performance.now()/220;for(const e of ENEMIES){if(!(e.stun>0)||e.state==="dead")continue;const s=toScreen([e.x,ETYPE[e.t].hpY-0.15,e.z]);if(s[2]<0)continue;oc.fillStyle="#ffe14a";for(let k=0;k<3;k++){const an=tn+k*2.09;const x=s[0]+Math.cos(an)*12,y=s[1]+Math.sin(an)*4;oc.beginPath();for(let q=0;q<10;q++){const aa=q/10*6.283,rr=q%2?2:5;q?oc.lineTo(x+Math.cos(aa)*rr,y+Math.sin(aa)*rr):oc.moveTo(x+Math.cos(aa)*rr,y+Math.sin(aa)*rr);}oc.closePath();oc.fill();}}}
+// ---- glow: any weapon from obsidian upward ----
+function weaponGlow(){if(WEAP.tier<4||!P.weapW||PL.dead>0||EQ==="bow")return;const[s,ppm]=ppmAt(P.weapW[0],P.weapW[1],P.weapW[2]);if(s[2]<0)return;const col=ARROW_RGB[WEAP.tier],pulse=0.65+0.35*Math.sin(performance.now()/260)+(P.atk>0.3&&P.atk<0.6?0.4:0);
+ oc.globalCompositeOperation="lighter";oc.globalAlpha=Math.min(1,0.5*pulse);const R=ppm*(WEAP.tier===6?0.9:0.6);const g=oc.createRadialGradient(s[0],s[1],0,s[0],s[1],R);g.addColorStop(0,`rgba(${col},.75)`);g.addColorStop(1,`rgba(${col},0)`);oc.fillStyle=g;oc.beginPath();oc.arc(s[0],s[1],R,0,7);oc.fill();oc.globalCompositeOperation="source-over";oc.globalAlpha=1;}
+bowLight=(function(old){return function(){const r=old();if(r[1][0]||r[1][1]||r[1][2])return r;if(WEAP.tier>=4&&P.weapW&&EQ!=="bow"){const c=ARROW_RGB[WEAP.tier].split(",").map(v=>v/255*(WEAP.tier===6?0.7:0.4));return[P.weapW,c];}return r;};})(bowLight);
 
 // ================= enemies: 3D models from the original drawings =================
 const EC={skin:hex("#c08354"),skinD:hex("#a86e43"),bronze:hex("#b8863a"),bronzeD:hex("#8a5f22"),gold:hex("#d6a640"),white:hex("#efe9da"),kilt:hex("#ece4d0"),wood:hex("#6b4a2c"),
@@ -1147,7 +1244,7 @@ function eFree(e,x,z){const r=0.22;return!blocked(Math.floor(x-r),Math.floor(z-r
 function addFloat(x,y,z,text,col,big){FLOATS.push({x,y,z,text,col,big,t:0});}
 function burst(x,y,z,col,n){for(let k=0;k<n;k++)FX.push({x,y,z,vx:(Math.random()-0.5)*3,vy:1+Math.random()*2.5,vz:(Math.random()-0.5)*3,t:0,life:0.5+Math.random()*0.4,col});}
 function damageEnemy(e,amt,crit,o={}){e.hp-=amt;e.showHp=4;if(e.state==="idle"||e.state==="return")e.state="chase";
- if(o.dot){addFloat(e.x,ETYPE[e.t].hpY-0.2,e.z,String(amt),"#ff9a40",false);}else{e.flash=0.14;addFloat(e.x,ETYPE[e.t].hpY,e.z,crit?amt+"!":String(amt),crit?"#ffd23a":"#ffffff",crit);
+ if(o.dot){addFloat(e.x,ETYPE[e.t].hpY-0.2,e.z,String(amt),o.col||"#ff9a40",false);}else{e.flash=0.14;addFloat(e.x,ETYPE[e.t].hpY,e.z,crit?amt+"!":String(amt),crit?"#ffd23a":"#ffffff",crit);
  const dx=e.x-P.x,dz=e.z-P.z,l=Math.hypot(dx,dz)||1,kb=o.nokb?0.08:o.kb!==undefined?o.kb:crit?0.5:0.25;if(eFree(e,e.x+dx/l*kb,e.z+dz/l*kb)){e.x+=dx/l*kb;e.z+=dz/l*kb;}
  fxHit(e,crit);}
  if(e.hp<=0){e.hp=0;e.dead=0.001;e.state="dead";e.respawn=25;fxDeath(e);spawnDrop(e);chestKill();}}
@@ -1166,16 +1263,17 @@ function updCombat(dt){
  PL.atkCd=Math.max(0,PL.atkCd-dt);let best=null,bd=1e9;
  for(const e of ENEMIES){if(e.state==="dead")continue;const d=Math.hypot(e.x-P.x,e.z-P.z);if(d<bd){bd=d;best=e;}}
  PL.target=best&&bd<curAtk().range+ETYPE[best.t].r?best:null;
- if(PL.target&&PL.atkCd<=0&&P.atk<=0){P.atk=0.0001;P.atkHit=false;PL.atkCd=atkCd();}
+ if(PL.target&&PL.atkCd<=0&&P.atk<=0){P.atk=0.0001;P.atkHit=false;startAttack();PL.atkCd=atkCd();}
  if(PL.target&&!P.moving)P.tYaw=Math.atan2(PL.target.x-P.x,PL.target.z-P.z);
- if(P.atk>0){P.atk+=dt/curAtk().dur;if(!P.atkHit&&P.atk>=(EQ==="bow"?0.55:0.5)){P.atkHit=true;weapStrike();}if(P.atk>=1)P.atk=0;}
- updDrops(dt);updArrows(dt);
+ if(P.atk>0){P.atk+=dt/curAtk().dur;{const ht=hitTimes();while(P.hitIdx<ht.length&&P.atk>=ht[P.hitIdx]){weapStrike(P.hitIdx);P.hitIdx++;}}if(P.atk>=1)P.atk=0;}
+ updDrops(dt);updArrows(dt);updZones(dt);
  // enemies: shared path field toward the player
  {const px=Math.floor(P.x),pz=Math.floor(P.z);flowT-=dt;if(!FLOW||flowT<=0||FLOW.cx!==px||FLOW.cz!==pz){FLOW=bfsField(px,pz,FR);FLOW.cx=px;FLOW.cz=pz;flowT=0.6;}}
  for(const e of ENEMIES){const T=ETYPE[e.t];e.flash=Math.max(0,e.flash-dt);e.hitT=Math.max(0,(e.hitT||0)-dt);e.showHp=Math.max(0,e.showHp-dt);
   if(e.state==="dead"){e.dead+=dt;e.respawn-=dt;if(e.respawn<=0&&Math.hypot(e.camp.x-P.x,e.camp.z-P.z)>16){Object.assign(e,{x:e.hx,z:e.hz,hp:e.hpMax,dead:0,state:"idle",atk:0,spd:0,lost:0});}continue;}
   const dP=Math.hypot(P.x-e.x,P.z-e.z);if(dP>42){e.spd=0;continue;}
-  const home=Math.hypot(e.x-e.hx,e.z-e.hz);let tx=e.x,tz=e.z,move=false,sp=T.speed;
+  if(e.stun>0){e.stun-=dt;e.spd=0;e.atk=0;continue;}if(e.slow>0)e.slow-=dt;
+  const home=Math.hypot(e.x-e.hx,e.z-e.hz);let tx=e.x,tz=e.z,move=false,sp=T.speed*(e.slow>0?0.5:1);
   if(e.state==="idle"){if(dP<7&&PL.dead===0){const pl=pathLen(FLOW,e.x,e.z);if(pl>=0&&pl<=11)e.state="chase";}e.wander-=dt;if(e.wander<=0){e.wander=2+Math.random()*4;const a=Math.random()*6.28,rr=Math.random()*1.6;e.wx=e.camp.x+Math.cos(a)*rr;e.wz=e.camp.z+Math.sin(a)*rr;}
    if(Math.hypot(e.wx-e.x,e.wz-e.z)>0.2){tx=e.wx;tz=e.wz;move=true;sp=T.speed*0.35;}}
   else if(e.state==="return"){if(!e.camp.field)e.camp.field=bfsField(Math.floor(e.camp.x),Math.floor(e.camp.z),20);const st=fieldStep(e.camp.field,e.x,e.z);
@@ -1192,7 +1290,7 @@ function updCombat(dt){
   if(dP<0.55&&dP>0){const push=(0.55-dP);if(eFree(e,e.x-(P.x-e.x)/dP*push,e.z-(P.z-e.z)/dP*push)){e.x-=(P.x-e.x)/dP*push;e.z-=(P.z-e.z)/dP*push;}}}
  for(const f of FLOATS)f.t+=dt;FLOATS=FLOATS.filter(f=>f.t<1.1);
  updFX(dt);}
-function drawCombatOverlay(){drawDrops();drawArrowFX();
+function drawCombatOverlay(){drawZones();drawDrops();drawArrowFX();weaponGlow();
  for(const e of ENEMIES){if(e.state==="dead"||e.showHp<=0)continue;const s=toScreen([e.x,ETYPE[e.t].hpY,e.z]);if(s[2]<0)continue;const w=46,a=Math.min(1,e.showHp);
   oc.globalAlpha=a;oc.fillStyle="rgba(0,0,0,.6)";oc.fillRect(s[0]-w/2-1,s[1]-1,w+2,7);oc.fillStyle="#e2483b";oc.fillRect(s[0]-w/2,s[1],w*e.hp/e.hpMax,5);oc.globalAlpha=1;}
  drawFX();
@@ -1241,6 +1339,8 @@ function drawFX(){
   else if(p.k==="flash"){const[s,ppm]=ppmAt(p.x,p.y,p.z);if(s[2]<0)continue;const R=ppm*(p.crit?0.95:0.65)*(0.6+q*0.6);oc.globalAlpha=1-q;
    const g=oc.createRadialGradient(s[0],s[1],0,s[0],s[1],R);g.addColorStop(0,"rgba(255,255,240,1)");g.addColorStop(0.35,p.crit?"rgba(255,210,90,.85)":"rgba(255,230,170,.7)");g.addColorStop(1,"rgba(255,160,60,0)");oc.fillStyle=g;oc.beginPath();oc.arc(s[0],s[1],R,0,7);oc.fill();
    oc.strokeStyle="rgba(255,250,220,1)";oc.lineWidth=2.2;const n=p.crit?8:6;for(let k=0;k<n;k++){const a=k/n*6.283+0.3,l=R*(k%2?0.9:1.4);oc.beginPath();oc.moveTo(s[0]+Math.cos(a)*R*0.25,s[1]+Math.sin(a)*R*0.25);oc.lineTo(s[0]+Math.cos(a)*l,s[1]+Math.sin(a)*l);oc.stroke();}}
+  else if(p.k==="dash"){oc.globalAlpha=1-q;oc.lineCap="round";oc.lineJoin="round";const pts=p.pts.map(v=>toScreen([v[0],1.0,v[1]]));if(pts.some(v=>v[2]<0))continue;
+   for(const[w,c]of[[10,"rgba(255,220,120,.5)"],[4,"rgba(255,252,235,1)"]]){oc.strokeStyle=c;oc.lineWidth=w;oc.beginPath();pts.forEach((v,i)=>i?oc.lineTo(v[0],v[1]):oc.moveTo(v[0],v[1]));oc.stroke();}}
   else if(p.k==="beam"){const a=toScreen([p.x,1.0,p.z]),b=toScreen([p.x+p.ux*p.L,1.0,p.z+p.uz*p.L]);if(a[2]<0)continue;const[,ppm]=ppmAt(p.x,1.0,p.z);const w=ppm*0.45*(q<0.15?q/0.15:1)*(1-q*0.6);oc.globalAlpha=1-q*q;
    oc.lineCap="round";oc.strokeStyle="rgba(255,220,120,.55)";oc.lineWidth=w*2.4;oc.beginPath();oc.moveTo(a[0],a[1]);oc.lineTo(b[0],b[1]);oc.stroke();oc.strokeStyle="rgba(255,252,235,1)";oc.lineWidth=w;oc.beginPath();oc.moveTo(a[0],a[1]);oc.lineTo(b[0],b[1]);oc.stroke();}
   else if(p.k==="wave"){const d=0.3+p.len*Math.min(1,q*1.6),cx=p.x+p.dx*d,cz=p.z+p.dz*d;const[s,ppm]=ppmAt(cx,p.y,cz);if(s[2]<0)continue;const f=toScreen([cx+p.dx,p.y,cz+p.dz]),ang=Math.atan2(f[1]-s[1],f[0]-s[0]);
@@ -1272,12 +1372,12 @@ function aimDown(v){const l=Math.hypot(v[0],v[1],v[2])||1,y=[-v[0]/l,-v[1]/l,-v[
 function staffStrike(){const T=STAFF_ATK[WEAP.tier],tier=WEAP.tier,tg=PL.target;let dx=Math.sin(P.yaw),dz=Math.cos(P.yaw);
  if(tg){const l=Math.hypot(tg.x-P.x,tg.z-P.z)||1;dx=(tg.x-P.x)/l;dz=(tg.z-P.z)/l;}
  const cx=tg&&T.area==="circle"?tg.x:P.x+dx*Math.min(1.6,T.range*0.6),cz=tg&&T.area==="circle"?tg.z:P.z+dz*Math.min(1.6,T.range*0.6);
- let n=0;for(const e of ENEMIES){if(e.state==="dead")continue;const ex=e.x-P.x,ez=e.z-P.z,d=Math.hypot(ex,ez),er=ETYPE[e.t].r;let hit=false;
+ let n=0;const hits=[];for(const e of ENEMIES){if(e.state==="dead")continue;const ex=e.x-P.x,ez=e.z-P.z,d=Math.hypot(ex,ez),er=ETYPE[e.t].r;let hit=false;
   if(T.area==="circle")hit=Math.hypot(e.x-cx,e.z-cz)<T.r+er;
   else if(T.area==="cone"){const along=(ex*dx+ez*dz)/(d||1);hit=d<T.r+er&&Math.acos(Math.max(-1,Math.min(1,along)))<T.ang;}
   else{const along=ex*dx+ez*dz,side=Math.abs(ex*dz-ez*dx);hit=along>-0.2&&along<T.r+er&&side<T.w+er;}
-  if(!hit)continue;n++;const crit=Math.random()<0.15;let dm=Math.round(staffDamage()*(0.9+Math.random()*0.2));if(crit)dm*=2;damageEnemy(e,dm,crit);}
- staffFX(tier,cx,cz,dx,dz);if(n===0)SHAKE=Math.max(SHAKE,tier>=4?0.1:0.04);}
+  if(!hit)continue;n++;hits.push(e);const crit=Math.random()<0.15;let dm=Math.round(staffDamage()*(0.9+Math.random()*0.2));if(crit)dm*=2;damageEnemy(e,dm,crit);}
+ staffFX(tier,cx,cz,dx,dz);staffSkill(hits,cx,cz,dx,dz);if(n===0)SHAKE=Math.max(SHAKE,tier>=4?0.1:0.04);}
 function staffFX(tier,cx,cz,dx,dz){const yaw=Math.atan2(dx,dz);
  if(tier===0){FX.push({k:"ring",x:cx,y:0.05,z:cz,t:0,life:0.4,r0:0.2,r1:1.1,col:"230,205,160"});fxSmoke(cx,0.2,cz,4,"200,180,140");fxChunks(cx,0.2,cz,5,["#b89a6a","#9a7a4a"],2.2,0.8);}
  else if(tier===1){FX.push({k:"slash",x:P.x,y:0.9,z:P.z,yaw,t:0,life:0.25,col:"255,150,80",R:2.2,sw:2.6});fxSparks(P.x+dx*1.2,0.9,P.z+dz*1.2,12,"255,140,70",5);}
@@ -1374,7 +1474,7 @@ function renderInv(){const tabs=[["w","Silahlar"],["t","Tabletler"],["c","Karakt
   const cards=Object.keys(WNAME).map(k=>{const own=CHEST.own[k],s=WSTATE[k],c=TIER_COL[s.tier],A=k==="staff"?STAFF_ATK[s.tier]:WATK[k];
    if(!own)return`<div class="wc lk"><div class="ic">${wIcon(k,"#777")}</div><div class="inf"><div class="nm">${WNAME[k]}</div><div class="st">Kilitli · Sandıklardan çıkabilir</div></div></div>`;
    return`<div class="wc ${k===EQ?"on":""}" style="border-color:${k===EQ?c:"rgba(255,255,255,.12)"}"><div class="ic" style="border-color:${c}">${wIcon(k,c)}</div><div class="inf"><div class="nm" style="color:${c}">${weapName(k)} ${k===EQ?"<i>KUŞANILDI</i>":`<u class="eq" data-k="${k}">Kuşan</u>`}</div>
-    <div class="bar"><i style="width:${s.tier===6&&s.lvl>=100?100:s.lvl}%;background:${c}"></i></div><div class="st">Kademe ${s.tier+1}/7 · Sv ${s.lvl}/100 · Hasar ${weapDamage(k)} · Menzil ${A.range} m</div>${k==="bow"?`<div class="sk">✦ ${BOW_SKILL[s.tier].n}: ${BOW_SKILL[s.tier].d}</div>`:""}</div></div>`;}).join("");
+    <div class="bar"><i style="width:${s.tier===6&&s.lvl>=100?100:s.lvl}%;background:${c}"></i></div><div class="st">Kademe ${s.tier+1}/7 · Sv ${s.lvl}/100 · Hasar ${weapDamage(k)} · Menzil ${A.range} m</div><div class="sk">✦ ${SKILLS[k][s.tier].n}: ${SKILLS[k][s.tier].d}</div></div></div>`;}).join("");
   const tiers=TIER_NAMES.map((n,i)=>`<span style="background:${TIER_COL[i]};opacity:${i<=WEAP.tier?1:0.28}" title="${n}">${i+1}</span>`).join("");
   body=`<div class="sec">Kuşanılan silahlar</div><div class="slots4">${slots}</div><div class="sec">${WNAME[EQ]} kademeleri</div><div class="tiers">${tiers}</div><div class="sec">Koleksiyon</div>${cards}
    <button class="test">Test: ${WNAME[EQ]} kademesini değiştir</button><button class="test all">Test: tüm silahların kilidini aç</button>`;}
