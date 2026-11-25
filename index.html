@@ -2072,6 +2072,19 @@ characterParts=function(){const now=performance.now(),dt=Math.max(0,Math.min(0.0
  else{const shR=[-0.225,0.33,0],shL=[0.225,0.33,0];
   const G=[-0.28+SP.gx,0.04+SP.gy+(a>0||show?0:Math.sin(ph)*0.04*amt),0.16+SP.gz+(a>0||show?0:Math.sin(ph)*0.05*amt)];
   const Wg=M4.chain(M4.T(G[0],G[1],G[2]),M4.Ry(SP.ry),M4.Rz(SP.rz),M4.Rx(SP.rx)),gr=GRIP[EQ],g1=show&&SP.g1!==undefined?SP.g1:gr[0];
+  // daggers are driven by the hand: arm first, then the blade sits upright in a straight-wristed fist
+  if(EQ==="dagger"){const dsc=M4.S(1.15,1.15,1.15),up0=[torso[4],torso[5],torso[6]],ts=Math.hypot(torso[0],torso[1],torso[2]);
+   const dHand=(sh,G,c,roll,fore,toss,tsp)=>{const v=nrm3([sh[0]-G[0],sh[1]-G[1],sh[2]-G[2]]);const wt=[G[0]+v[0]*0.06,G[1]+v[1]*0.06+0.012,G[2]+v[2]*0.06];
+    const lm=ik2(out,torso,sh,wt,PT.upperArm,fore);const el=M4.xp(lm,[0,0,0]),wr=M4.xp(lm,[0,-FA,0]);const d=nrm3([wr[0]-el[0],wr[1]-el[1],wr[2]-el[2]]),y=[-d[0],-d[1],-d[2]];
+    const u=nrm3(up0),ud=u[0]*y[0]+u[1]*y[1]+u[2]*y[2];let x=nrm3([u[0]-ud*y[0],u[1]-ud*y[1],u[2]-ud*y[2]]);const yx=cross3(y,x);x=nrm3([x[0]*Math.cos(roll)+yx[0]*Math.sin(roll),x[1]*Math.cos(roll)+yx[1]*Math.sin(roll),x[2]*Math.cos(roll)+yx[2]*Math.sin(roll)]);
+    const z=cross3(x,y);const H=M4.chain([x[0],x[1],x[2],0,y[0],y[1],y[2],0,z[0],z[1],z[2],0,wr[0]+u[0]*toss,wr[1]+u[1]*toss,wr[2]+u[2]*toss,1],M4.S(ts,ts,ts));
+    const Hf=toss?M4.chain([x[0],x[1],x[2],0,y[0],y[1],y[2],0,z[0],z[1],z[2],0,wr[0],wr[1],wr[2],1],M4.S(ts,ts,ts)):H;
+    out.push([HAND_FIST,M4.chain(Hf,M4.T(HOLE[0],HOLE[1],HOLE[2]),M4.S(1.15,1.15,1.15),M4.T(-HOLE[0],-HOLE[1],-HOLE[2]))]);
+    const W=M4.chain(H,M4.T(HOLE[0],HOLE[1],HOLE[2]),M4.Rz(-c),M4.Rz(-Math.PI/2),M4.Rx(tsp||0),M4.T(0,-0.0115,0),dsc);out.push([WMODELS.dagger[WEAP.tier],W]);return W;};
+   const cl=v=>Math.max(-0.35,Math.min(1.25,v));
+   const W1=dHand(shR,G,0.38+cl(SP.rx-0.95),-SP.ry*0.7+SP.rz*0.5,FORE_R,SP.toss||0,SP.tsp||0);P.weapW=M4.xp(W1,[0,0.3,0]);
+   const L=SP.L,G2=[0.28+L.gx,0.04+L.gy,0.16+L.gz];const W2=dHand(shL,G2,0.3+cl(L.rx-1.25),-L.ry*0.7+L.rz*0.5,FORE_L,0,0);P.weapW2=M4.xp(W2,[0,0.3,0]);}
+  else{
   // main hand: fist locked on the handle, arm reaches the wrist
   const h1=gripHand(Wg,g1,shR);ik2(out,torso,shR,h1.w,PT.upperArm,FORE_R);out.push([HAND_FIST,M4.chain(torso,h1.Hd)]);
   const dsc=EQ==="dagger"?M4.S(1.15,1.15,1.15):M4.id();let Wm=M4.chain(torso,Wg,dsc);
@@ -2083,7 +2096,7 @@ characterParts=function(){const now=performance.now(),dt=Math.max(0,Math.min(0.0
   else{const free=[0.27+sw*0.01,0.33-(UA+FA)*0.93,0.04+Math.sin(ph)*0.18*amt];const g2=show&&SP.g2!==undefined?SP.g2:gr[1];
    if(P.twoH>0.6){const h2=gripHand(Wg,g2,shL);ik2(out,torso,shL,lerp3(free,h2.w,Math.min(1,(P.twoH-0.6)/0.3)),PT.upperArm,FORE_L);
     if(P.twoH>0.85)out.push([HAND_FIST,M4.chain(torso,h2.Hd)]);else{const lm=out[out.length-1][1];out.push([HAND_FIST,M4.chain(lm,M4.T(0,-FA,0))]);}}
-   else{const lm=ik2(out,torso,shL,lerp3(free,[0.24,0.12,0.16],st*idle*0.5),PT.upperArm,FORE_L);out.push([HAND_OPEN,M4.chain(lm,M4.T(0,-FA,0),M4.Rx(0.15),M4.S(1.12,1.12,1.12))]);}}}
+   else{const lm=ik2(out,torso,shL,lerp3(free,[0.24,0.12,0.16],st*idle*0.5),PT.upperArm,FORE_L);out.push([HAND_OPEN,M4.chain(lm,M4.T(0,-FA,0),M4.Rx(0.15),M4.S(1.12,1.12,1.12))]);}}}}
  const look=invOpen?SHW.look:0;
  const hm=M4.chain(torso,M4.T(0,0.71,0.01),M4.Ry(look+(EQ==="bow"?1.05*P.aim:0)),M4.S(1.24,1.24,1.24),M4.Rx(-0.05*amt-BL.lean*0.5+Math.sin(ph*2)*0.02*amt));
  out.push([PT.head,hm]);out.push([PT.face,hm]);out.push([PT.hair,hm]);
