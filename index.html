@@ -1250,13 +1250,13 @@ characterParts=function(){const now=performance.now(),dt=Math.max(0,Math.min(0.0
  if(typeof PL!=='undefined'&&PL.dead>0)base=M4.chain(base,M4.Rx(-Math.min(1,PL.dead/0.5)*1.45));
  const breathe=1+Math.sin(now/650)*0.015*(1-amt);
  const roll=Math.max(-0.16,Math.min(0.16,-P.yawV*0.035*amt)),accLean=Math.max(-0.1,Math.min(0.12,P.acc*0.025));
- const pelvis=M4.chain(base,M4.T(0,HIPY+bob-drop,0),M4.Ry(Math.sin(ph)*0.08*amt+BL.hip*0.35+0.12*st*idle),M4.Rz(roll*0.5));
+ const pelvis=M4.chain(base,M4.T(0,HIPY+bob-drop,0),M4.Ry(Math.sin(ph)*0.08*amt+BL.hip*0.35+0.12*st*idle-(EQ==="bow"?0.45*P.aim:0)),M4.Rz(roll*0.5));
  for(const side of[1,-1]){const p=ph+(side>0?0:Math.PI);
   const thigh=Math.sin(p)*0.55*amt+(side>0?split[0]:split[1])+kap/2,knee=(Math.cos(p)>0?0.12+Math.cos(p)*0.9:0.1+Math.max(0,-Math.sin(p))*0.12)*amt+kap+0.05*idle;
   const tm=M4.chain(pelvis,M4.T(side*0.095,0,0),M4.Rx(-thigh));out.push([PT.thigh,tm]);
   const sm=M4.chain(tm,M4.T(0,-TH,0),M4.Rx(knee));out.push([PT.shin,sm]);
   out.push([PT.foot,M4.chain(sm,M4.T(0,-SH,0),M4.Rx(thigh-knee))]);}
- const torso=M4.chain(pelvis,M4.T(0,0.16,0),M4.Ry(-Math.sin(ph)*0.12*amt*(a>0?0.3:1)+SP.tw+BL.hip*0.65-0.12*st*idle),M4.Rz(roll),M4.Rx(0.08*amt+accLean+BL.lean+0.05*st),M4.S(1,breathe,1));out.push([PT.torso,torso]);
+ const torso=M4.chain(pelvis,M4.T(0,0.16,0),M4.Ry(-Math.sin(ph)*0.12*amt*(a>0?0.3:1)+SP.tw+BL.hip*0.65-0.12*st*idle-(EQ==="bow"?0.7*P.aim:0)),M4.Rz(roll),M4.Rx(0.08*amt+accLean+BL.lean+0.05*st),M4.S(1,breathe,1));out.push([PT.torso,torso]);
  const G=[-0.28+SP.gx,0.04+SP.gy+(a>0?0:Math.sin(ph)*0.04*amt),0.16+SP.gz+(a>0?0:Math.sin(ph)*0.05*amt)];
  if(EQ==="bow")bowParts(out,torso,amt,ph);else{
   const shR=[-0.225,0.33,0],shL=[0.225,0.33,0];
@@ -2027,22 +2027,24 @@ const cloneP=p=>JSON.parse(JSON.stringify(p));
 function lerpP(a,b,e){const r={};for(const k in a){if(k==="L")r.L=lerpP(a.L,b.L||a.L,e);else r[k]=a[k]+((b[k]??a[k])-a[k])*e;}return r;}
 function mergeP(base,p){const r=cloneP(base);if(p==="rest")return cloneP(SREST[EQ]);if(p==="rest4"){const q=cloneP(SREST[EQ]);q.rz+=Math.PI*4;return q;}if(p==="rest4t"){const q=cloneP(SREST[EQ]);q.tsp=Math.PI*4;return q;}
  for(const k in p){if(k==="L")Object.assign(r.L,p.L);else r[k]=p[k];}return r;}
-function showStart(){const sq=SSEQ[EQ];if(!sq){P.atkN++;P.atk=0.0001;SHW.wait=3.5+Math.random()*2;return;}SHW.seq=sq;SHW.i=0;SHW.t=0;SHW.from=cloneP(SREST[EQ]);SHW.to=mergeP(SHW.from,sq[0].p);}
+function showStart(){const sq=SSEQ[EQ];if(!sq)return;SHW.seq=sq;SHW.i=0;SHW.t=0;SHW.from=cloneP(SREST[EQ]);SHW.to=mergeP(SHW.from,sq[0].p);}
 function showFx(k){SHW.flash=1;if(k==="slam"||k==="plant")SHW.dust=1;}
 function showUpdate(dt){SHW.flash=Math.max(0,SHW.flash-dt*2.2);SHW.dust=Math.max(0,(SHW.dust||0)-dt*1.6);SHW.idle+=dt;
  SHW.lookT-=dt;if(SHW.lookT<=0){SHW.lookTo=(Math.random()-0.5)*0.9;SHW.lookT=2+Math.random()*2.5;}SHW.look+=(SHW.lookTo-SHW.look)*Math.min(1,dt*3);
- if(EQ==="bow"){if(P.atk>0){P.atk+=dt/(curAtk().dur*1.2);if(P.atk>=1){P.atk=0;SHW.flash=1;SHW.wait=3.5+Math.random()*2;}}else{SHW.wait-=dt;if(SHW.wait<=0)showStart();}return;}
+ if(EQ==="bow"){const want=SHW.bowUp?1:0;P.aim+=(want-P.aim)*Math.min(1,dt*5);
+  if(P.atk>0){P.atk+=dt/(curAtk().dur*1.6);if(P.atk>=0.55&&!SHW.shot){SHW.shot=true;SHW.flash=1;}if(P.atk>=1){P.atk=0;SHW.shot=false;SHW.bowN=(SHW.bowN||0)+1;if(SHW.bowN>=2){SHW.bowUp=false;SHW.bowN=0;SHW.wait=3+Math.random()*2;}else P.atk=0.0001;}}
+  else if(SHW.bowUp){if(P.aim>0.92)P.atk=0.0001;}else{SHW.wait-=dt;if(SHW.wait<=0)SHW.bowUp=true;}return;}
  if(!SHW.seq){SHW.wait-=dt;if(SHW.wait<=0)showStart();return;}
  const k=SHW.seq[SHW.i];SHW.t+=dt;if(SHW.t>=k.d){if(k.fx)showFx(k.fx);SHW.i++;SHW.t=0;if(SHW.i>=SHW.seq.length){SHW.seq=null;SHW.wait=3.2+Math.random()*2.5;return;}SHW.from=SHW.to;SHW.to=mergeP(SHW.from,SHW.seq[SHW.i].p);}}
 function showPose(){const R=SREST[EQ];if(!SHW.seq)return cloneP(R);const k=SHW.seq[SHW.i],x=Math.min(1,SHW.t/k.d),e=x*x*(3-2*x);return lerpP(SHW.from,SHW.to,e);}
 function showOff(){SHW.seq=null;SHW.wait=0.05;}
 renderPreview=(function(base){return function(t){showUpdate(dtLast);base(t);};})(renderPreviewBase);
-openInv=(function(base){return function(){base();SHW.seq=null;SHW.wait=1.6;SHW.idle=0;P.atk=0;};})(openInvShow);
+openInv=(function(base){return function(){base();SHW.seq=null;SHW.wait=1.6;SHW.idle=0;P.atk=0;SHW.bowUp=false;SHW.bowN=0;SHW.shot=false;if(EQ==="bow")P.aim=0;};})(openInvShow);
 // ---- full rig with hands ----
 characterParts=function(){const now=performance.now(),dt=Math.max(0,Math.min(0.05,(now-PS_last)/1000));PS_last=now;
  const show=invOpen&&EQ!=="bow";const amt=Math.min(1,P.spd/SPEED),ph=P.phase,out=[],idle=1-amt,a=P.atk>0?Math.min(1,P.atk):0;
  P.stance+=((invOpen||(PL.target&&PL.target.state!=="dead")||a>0?1:0)-P.stance)*Math.min(1,dt*4);
- const wantTwo=show?(showPose().two||0):((EQ==="staff"||EQ==="hammer")&&a>0&&a<0.9?1:0);
+ const wantTwo=show?(showPose().two||0):((EQ==="staff"||EQ==="hammer")&&((a>0&&a<0.9)||P.stance>0.5)?1:0);
  P.twoH+=(wantTwo-P.twoH)*Math.min(1,dt*(wantTwo>P.twoH?14:6));
  if(dt>0){const yv=angD(P.yaw,P.lastYaw)/dt;P.yawV+=(yv-P.yawV)*Math.min(1,dt*8);const ac=(P.spd-P.lastSpd)/dt;P.acc+=(ac-P.acc)*Math.min(1,dt*6);}P.lastYaw=P.yaw;P.lastSpd=P.spd;
  const SP=show?showPose():smoothPose("w",weapPose(a),a>0?22:12,dt,["spin"]);const BL=show?{hip:0,lean:0,crouch:EQ==="dagger"?0.05:0.01,step:0}:smoothPose("b",bodyLayer(a),24,dt);
@@ -2057,13 +2059,13 @@ characterParts=function(){const now=performance.now(),dt=Math.max(0,Math.min(0.0
  if(typeof PL!=='undefined'&&PL.dead>0)base=M4.chain(base,M4.Rx(-Math.min(1,PL.dead/0.5)*1.45));
  const breathe=1+Math.sin(now/650)*(invOpen?0.022:0.015)*(1-amt);
  const roll=Math.max(-0.16,Math.min(0.16,-P.yawV*0.035*amt))+sw*0.025,accLean=Math.max(-0.1,Math.min(0.12,P.acc*0.025));
- const pelvis=M4.chain(base,M4.T(0,HIPY+bob-drop,0),M4.Ry(Math.sin(ph)*0.08*amt+BL.hip*0.35+0.12*st*idle),M4.Rz(roll*0.5));
+ const pelvis=M4.chain(base,M4.T(0,HIPY+bob-drop,0),M4.Ry(Math.sin(ph)*0.08*amt+BL.hip*0.35+0.12*st*idle-(EQ==="bow"?0.45*P.aim:0)),M4.Rz(roll*0.5));
  for(const side of[1,-1]){const p=ph+(side>0?0:Math.PI);
   const thigh=Math.sin(p)*0.55*amt+(side>0?split[0]:split[1])+kap/2,knee=(Math.cos(p)>0?0.12+Math.cos(p)*0.9:0.1+Math.max(0,-Math.sin(p))*0.12)*amt+kap+0.05*idle;
   const tm=M4.chain(pelvis,M4.T(side*0.095,0,0),M4.Rx(-thigh));out.push([PT.thigh,tm]);
   const sm=M4.chain(tm,M4.T(0,-TH,0),M4.Rx(knee));out.push([PT.shin,sm]);
   out.push([PT.foot,M4.chain(sm,M4.T(0,-SH,0),M4.Rx(thigh-knee))]);}
- const torso=M4.chain(pelvis,M4.T(0,0.16,0),M4.Ry(-Math.sin(ph)*0.12*amt*(a>0?0.3:1)+SP.tw+BL.hip*0.65-0.12*st*idle),M4.Rz(roll),M4.Rx(0.08*amt+accLean+BL.lean+0.05*st),M4.S(1,breathe,1));out.push([PT.torso,torso]);
+ const torso=M4.chain(pelvis,M4.T(0,0.16,0),M4.Ry(-Math.sin(ph)*0.12*amt*(a>0?0.3:1)+SP.tw+BL.hip*0.65-0.12*st*idle-(EQ==="bow"?0.7*P.aim:0)),M4.Rz(roll),M4.Rx(0.08*amt+accLean+BL.lean+0.05*st),M4.S(1,breathe,1));out.push([PT.torso,torso]);
  if(EQ==="bow"){bowParts(out,torso,amt,ph);for(let i=out.length-1;i>=0;i--){const m=out[i][0];if(m&&m.extra&&!out[i].hx){out.push([m.extra,M4.chain(out[i][1],M4.T(0,-FA,0))]);}}}
  else{const shR=[-0.225,0.33,0],shL=[0.225,0.33,0];
   const G=[-0.28+SP.gx,0.04+SP.gy+(a>0||show?0:Math.sin(ph)*0.04*amt),0.16+SP.gz+(a>0||show?0:Math.sin(ph)*0.05*amt)];
@@ -2081,13 +2083,58 @@ characterParts=function(){const now=performance.now(),dt=Math.max(0,Math.min(0.0
     if(P.twoH>0.85)out.push([HAND_FIST,M4.chain(torso,h2.H)]);else{const lm=out[out.length-1][1];out.push([HAND_FIST,M4.chain(lm,M4.T(0,-FA,0))]);}}
    else{const lm=ik2(out,torso,shL,lerp3(free,[0.24,0.12,0.16],st*idle*0.5),PT.upperArm,FORE_L);out.push([HAND_OPEN,M4.chain(lm,M4.T(0,-FA,0),M4.Rx(0.15))]);}}}
  const look=invOpen?SHW.look:0;
- const hm=M4.chain(torso,M4.T(0,0.71,0.01),M4.Ry(look),M4.S(1.24,1.24,1.24),M4.Rx(-0.05*amt-BL.lean*0.5+Math.sin(ph*2)*0.02*amt));
+ const hm=M4.chain(torso,M4.T(0,0.71,0.01),M4.Ry(look+(EQ==="bow"?1.05*P.aim:0)),M4.S(1.24,1.24,1.24),M4.Rx(-0.05*amt-BL.lean*0.5+Math.sin(ph*2)*0.02*amt));
  out.push([PT.head,hm]);out.push([PT.face,hm]);out.push([PT.hair,hm]);
  if(SHW.blink>0){const b=Math.sin(SHW.blink/0.14*Math.PI);out.push([EYELID,M4.chain(hm,M4.T(0,0.03*(1-b),0.004),M4.S(1.03,Math.max(0.05,b),1.03))]);}
  return out;};
 EYELID.po=true;
 // pedestal flash and dust in the showcase
 
+
+// ================= archery done properly + combat stances for every weapon =================
+const STANCE={staff:{rx:1.15,ry:0.15,rz:0,gx:0.16,gy:0.02,gz:0.1,tw:0.15,lift:0,spin:0},hammer:{rx:0.55,ry:0,rz:-0.55,gx:0.22,gy:0.04,gz:0.12,tw:0.1,lift:0,spin:0}};
+const BOW_TW=1.15,nrm3=v=>{const l=Math.hypot(v[0],v[1],v[2])||1;return[v[0]/l,v[1]/l,v[2]/l];},cross3=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
+function frameM(p,y,z){z=nrm3(z);let x=nrm3(cross3(y,z));y=cross3(z,x);return[x[0],x[1],x[2],0,y[0],y[1],y[2],0,z[0],z[1],z[2],0,p[0],p[1],p[2],1];}
+bowParts=function(out,torso,amt,ph){const t=WEAP.tier,a=P.atk>0?Math.min(1,P.atk):0,aim=P.aim,ez=x=>x*x*(3-2*x),tz=bowTipZ(t);
+ const tw=BOW_TW*aim,f=[Math.sin(tw),0,Math.cos(tw)];// target direction in torso space
+ const shB=[0.225,0.33,0],shD=[-0.225,0.33,0];
+ // bow position: resting at the side, or held out at shoulder height toward the target
+ const restB=[0.27+Math.sin(ph)*0.0,0.0,0.1],aimB=[shB[0]+f[0]*0.37,0.42,shB[2]+f[2]*0.37];const B=lerp3(restB,aimB,ez(aim));
+ const up=nrm3([-0.12*aim,1,0]),dir=nrm3(lerp3([0,0.05,1],f,ez(aim)));const bowM0=frameM(B,up,dir);
+ // draw cycle: nock -> draw to the cheek -> hold -> release -> follow-through -> reach the quiver -> nock
+ const anchor=[B[0]-f[0]*0.46,0.47,B[2]-f[2]*0.46],Q=[0.06,0.56,-0.24];
+ let pull=0,hand=null,open=false,arrow=aim>0.6,kick=0;
+ const nockAt=k=>M4.xp(bowM0,[0,0,tz-k]);
+ if(aim>0.05){if(a<=0)hand=nockAt(0);
+  else if(a<0.12){hand=nockAt(0);}
+  else if(a<0.5){pull=0.46*ez((a-0.12)/0.38);hand=nockAt(pull);}
+  else if(a<0.55){pull=0.46;hand=nockAt(pull);}
+  else if(a<0.72){const f2=ez((a-0.55)/0.17);pull=-0.05*Math.sin(f2*Math.PI*3)*(1-f2);open=true;arrow=false;kick=Math.sin(f2*Math.PI)*(1-f2);
+   hand=lerp3(anchor,[anchor[0]-f[0]*0.12,anchor[1]+0.03,anchor[2]-f[2]*0.12-0.04],ez(f2));}
+  else if(a<0.88){const f3=ez((a-0.72)/0.16);arrow=false;open=true;hand=lerp3([anchor[0]-f[0]*0.12,anchor[1]+0.03,anchor[2]-f[2]*0.12-0.04],Q,f3);}
+  else{const f4=ez((a-0.88)/0.12);arrow=f4>0.3;hand=lerp3(Q,nockAt(0),f4);}}
+ const bowM=kick?M4.chain(M4.T(-f[0]*0.03*kick,0.01*kick,-f[2]*0.03*kick),bowM0,M4.Rx(-0.12*kick)):bowM0;
+ // bow hand: fist locked on the grip
+ const hb=gripHand(bowM,0,shB);ik2(out,torso,shB,hb.w,PT.upperArm,FORE_L);out.push([HAND_FIST,M4.chain(torso,hb.H)]);
+ // draw hand: fingers on the string (fist around it), opens after the release
+ if(hand){if(!open&&a<0.72){const strM=M4.chain(bowM,M4.T(0,0,tz-Math.max(0,pull)));const hd=gripHand(M4.chain(M4.T(hand[0]-M4.xp(strM,[0,0,0])[0],hand[1]-M4.xp(strM,[0,0,0])[1],hand[2]-M4.xp(strM,[0,0,0])[2]),strM),0,shD);
+   ik2(out,torso,shD,hd.w,PT.upperArm,FORE_R);out.push([HAND_FIST,M4.chain(torso,hd.H)]);}
+  else{const lm=ik2(out,torso,shD,hand,PT.upperArm,FORE_R);out.push([HAND_OPEN,M4.chain(lm,M4.T(0,-FA,0),M4.Rx(0.2))]);}}
+ else{const free=[-0.27,0.33-(UA+FA)*0.93,0.04+Math.sin(ph+Math.PI)*0.18*amt];const lm=ik2(out,torso,shD,free,PT.upperArm,FORE_R);out.push([HAND_OPEN,M4.chain(lm,M4.T(0,-FA,0),M4.Rx(0.15))]);}
+ out.push([BOW[t],M4.chain(torso,bowM)]);
+ const top=[0,BOW_L,tz],bot=[0,-BOW_L,tz],mid=[0,0,tz-pull],bw=M4.chain(torso,bowM);out.push([BOWSTR[t],M4.mul(bw,segM(bot,mid))]);out.push([BOWSTR[t],M4.mul(bw,segM(mid,top))]);
+ if(arrow){const ap=a>=0.88?lerp3(Q,nockAt(0),ez((a-0.88)/0.12)):null;
+  if(ap&&a<0.97){out.push([ARROW[t],M4.chain(torso,M4.T(ap[0],ap[1],ap[2]),M4.Rx(-0.6),M4.T(0,0,0.3),M4.Rx(Math.PI/2))]);}
+  else out.push([ARROW[t],M4.chain(bw,M4.T(0.02,0.01,tz-Math.max(0,pull)+0.3),M4.Rx(Math.PI/2))]);}
+ P.nock=M4.xp(M4.chain(bw,M4.T(0,0,tz+0.35)),[0,0,0]);P.bowW=M4.xp(bw,[0,0,0.1]);
+ out.push([QUIVER[t],M4.chain(torso,M4.T(0.1,0.24,-0.21),M4.Rz(0.45),M4.Rx(-0.15))]);};
+// stances: staff and hammer two-handed guard when a fight is on; the bow turns the body side-on
+const cpBase=characterParts;
+characterParts=function(){const show=invOpen&&EQ!=="bow";
+ if(!show&&STANCE[EQ]){const a=P.atk>0?Math.min(1,P.atk):0,st=P.stance;const wp0=weapPose;
+  weapPose=function(x){const r=wp0(x);if(x>0||invOpen)return r;const k=sstep(0.05,0.9,st),S=STANCE[EQ];for(const q in S)r[q]=r[q]+(S[q]-r[q])*k;return r;};
+  const out=cpBase();weapPose=wp0;return out;}
+ return cpBase();};
 
 // ================= tablet slots =================
 const TABS=["Ateş","Rüzgâr","Kan","Taş","Gölge","Ses","Ad"];
