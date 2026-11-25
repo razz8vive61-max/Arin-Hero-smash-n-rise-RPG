@@ -1105,6 +1105,81 @@ function weaponGlow(){if(WEAP.tier<4||!P.weapW||PL.dead>0||EQ==="bow")return;con
  oc.globalCompositeOperation="lighter";oc.globalAlpha=Math.min(1,0.5*pulse);const R=ppm*(WEAP.tier===6?0.9:0.6);const g=oc.createRadialGradient(s[0],s[1],0,s[0],s[1],R);g.addColorStop(0,`rgba(${col},.75)`);g.addColorStop(1,`rgba(${col},0)`);oc.fillStyle=g;oc.beginPath();oc.arc(s[0],s[1],R,0,7);oc.fill();oc.globalCompositeOperation="source-over";oc.globalAlpha=1;}
 bowLight=(function(old){return function(){const r=old();if(r[1][0]||r[1][1]||r[1][2])return r;if(WEAP.tier>=4&&P.weapW&&EQ!=="bow"){const c=ARROW_RGB[WEAP.tier].split(",").map(v=>v/255*(WEAP.tier===6?0.7:0.4));return[P.weapW,c];}return r;};})(bowLight);
 
+// ================= full-body rig: weight shift, hips, crouch, lunge, two-handed grips, dual daggers =================
+const PSM={};let PS_last=performance.now();P.stance=0;P.twoH=0;P.lastYaw=P.yaw;P.yawV=0;P.acc=0;P.lastSpd=0;
+const bumpF=(u,c,w)=>{const q=(u-c)/w;return Math.abs(q)>=1?0:(1-q*q)*(1-q*q);};
+const sstep=(a,b,x)=>{const t=Math.max(0,Math.min(1,(x-a)/(b-a)));return t*t*(3-2*t);};
+const BODY={staff:{W:0.18,F:0.12,hip:0.45,lean:0.14,crouch:0.05,step:0.16},hammer:{W:0.28,F:0.14,hip:0.55,lean:0.24,crouch:0.13,step:0.12},
+ dagger:{W:0.12,F:0.09,hip:0.38,lean:0.12,crouch:0.06,step:0.09},bow:{W:0.22,F:0.1,hip:-0.1,lean:-0.06,crouch:0.02,step:0}};
+function bodyLayer(a){const o={hip:0,lean:0,crouch:0,step:0};if(a<=0)return o;const B=BODY[EQ],ht=hitTimes(),fade=1-sstep(0.82,1,a);
+ ht.forEach((h,i)=>{const u=a-h,sg=EQ==="dagger"&&i%2?-1:1,w=Math.max(0.05,Math.min(B.W,h*0.9));const ant=bumpF(u,-w*0.6,w),str=bumpF(u,B.F*0.5,B.F*1.6)+0.6*bumpF(u,B.F*2.2,B.F*2.2);
+  o.hip+=sg*B.hip*(-0.6*ant+str);o.lean+=B.lean*(-0.7*ant+str);o.crouch+=B.crouch*(0.3*ant+str);o.step+=B.step*str;});
+ for(const k in o)o[k]*=fade;return o;}
+function smoothPose(key,o,rate,dt,skip){const s=PSM[key]||(PSM[key]={});const r={};const f=Math.min(1,dt*rate);
+ for(const k in o){if(typeof o[k]!=="number"||(skip&&skip.includes(k))){r[k]=o[k];continue;}if(s[k]===undefined)s[k]=o[k];s[k]+=(o[k]-s[k])*f;r[k]=s[k];}
+ if(o.L){r.L=smoothPose(key+"L",o.L,rate,dt);}return r;}
+// two-bone arm toward a torso-space target (elbow bends backward/outward)
+function ikArm(out,torso,sh,tgt,upper,lower){const v=[tgt[0]-sh[0],tgt[1]-sh[1],tgt[2]-sh[2]],L=Math.hypot(v[0],v[1],v[2]),reach=UA+FA+0.05,bend=Math.acos(Math.min(1,L/reach))*1.4;
+ const um=M4.chain(torso,M4.T(sh[0],sh[1],sh[2]),aimDown(v),M4.Rx(bend*0.5));out.push([upper,um]);const lm=M4.chain(um,M4.T(0,-UA,0),M4.Rx(-bend));out.push([lower,lm]);return lm;}
+
+// ---- dual daggers, reverse grip (blade runs back along the forearm) ----
+const DG_RX=-2.5;
+function handMove(kind,b){const ez=x=>x*x*(3-2*x),w=b<=0?0:b<0.4?ez(b/0.4):1,s=b<0.4?0:b<0.6?ez((b-0.4)/0.2):1,k=1-(b<0.65?0:ez((b-0.65)/0.35));if(b<=0||b>=1)return{dx:0,dy:0,dz:0,rx:0,ry:0,rz:0};
+ if(kind==="punch")return{dx:0.09*s*k,dy:(0.04*w+0.05*s)*k,dz:(-0.09*w*(1-s)+0.34*s)*k,rx:(0.15*w+0.45*s)*k,ry:0,rz:0};
+ if(kind==="sweep")return{dx:(-0.13*w*(1-s)+0.38*s)*k,dy:0.07*w*k,dz:(0.04*w+0.18*s)*k,rx:0.95*Math.min(1,w*1.5)*k,ry:(0.6*w-1.3*s)*k,rz:0.25*w*k};
+ if(kind==="spread")return{dx:-0.2*w*k,dy:0.1*w*k,dz:0.06*w*k,rx:0.95*w*k,ry:0,rz:0.4*w*k};
+ if(kind==="back")return{dx:-0.05*w*k,dy:0.04*w*k,dz:-0.2*w*k,rx:0.8*w*k,ry:0,rz:0};return{dx:0,dy:0,dz:0,rx:0,ry:0,rz:0};}
+daggerPose=function(t,a){const N={dx:0,dy:0,dz:0,rx:0,ry:0,rz:0};let R=N,Lh=N,spin=0,lift=0,tw=0;
+ if(a>0){switch(t){case 0:R=handMove("punch",a);break;
+  case 1:if(a<0.5)R=handMove("punch",a*2);else Lh=handMove("punch",a*2-1);break;
+  case 2:R=handMove("sweep",a);break;
+  case 3:{const i=Math.min(2,Math.floor(a*3)),b=a*3-i;if(i===0)R=handMove("sweep",b);else if(i===1)Lh=handMove("sweep",b);else{R=handMove("sweep",b);Lh=handMove("sweep",b);}break;}
+  case 4:R=handMove("punch",a);if(P.special)Lh=handMove("punch",a);break;
+  case 5:if(P.special){R=handMove("spread",a);Lh=R;spin=a*Math.PI*4;}else R=handMove("sweep",a);break;
+  default:if(P.special){R=handMove("back",a);Lh=R;lift=0.15*Math.sin(a*Math.PI);}else R=handMove("punch",a);}}
+ // main hand sits at the right of the body (-x), its "inward" is +x; off hand mirrors
+ return{rx:DG_RX+R.rx,ry:R.ry,rz:R.rz,gx:0.07+R.dx,gy:0.19+R.dy,gz:0.08+R.dz,tw,lift,spin,
+  L:{rx:DG_RX+Lh.rx,ry:-Lh.ry,rz:-Lh.rz,gx:-0.07-Lh.dx,gy:0.21+Lh.dy,gz:0.1+Lh.dz}};};
+characterParts=function(){const now=performance.now(),dt=Math.max(0,Math.min(0.05,(now-PS_last)/1000));PS_last=now;
+ const amt=Math.min(1,P.spd/SPEED),ph=P.phase,out=[],idle=1-amt,a=P.atk>0?Math.min(1,P.atk):0;
+ // smoothed state: combat stance, two-hand grip, turn rate, acceleration
+ P.stance+=(((PL.target&&PL.target.state!=="dead")||a>0?1:0)-P.stance)*Math.min(1,dt*4);
+ P.twoH+=(((EQ==="staff"||EQ==="hammer")&&a>0&&a<0.9?1:0)-P.twoH)*Math.min(1,dt*(a>0?14:6));
+ if(dt>0){const yv=angD(P.yaw,P.lastYaw)/dt;P.yawV+=(yv-P.yawV)*Math.min(1,dt*8);const ac=(P.spd-P.lastSpd)/dt;P.acc+=(ac-P.acc)*Math.min(1,dt*6);}P.lastYaw=P.yaw;P.lastSpd=P.spd;
+ const SP=smoothPose("w",weapPose(a),a>0?22:12,dt,["spin"]),BL=smoothPose("b",bodyLayer(a),24,dt);
+ const st=P.stance;
+ // legs: stance split + crouch, kept planted by dropping the pelvis
+ const crouch=Math.max(0,0.022*st+BL.crouch)*(0.45+0.55*idle),kap=2*Math.acos(Math.max(0.6,1-crouch/(TH+SH)));
+ const split=[0,0],leg=(sd)=>(sd>0?0.2*st+BL.step*2.4:-0.16*st-BL.step*1.3)*idle;split[0]=leg(1);split[1]=leg(-1);
+ const vlen=(th)=>TH*Math.cos(th+kap/2)+SH*Math.cos(th+kap/2-kap);const drop=(TH+SH)-Math.max(vlen(split[0]),vlen(split[1]));
+ const bob=P.moving?(Math.abs(Math.cos(ph))*0.035-0.022)*amt:0;
+ let base=M4.chain(M4.T(P.x,(MAP?groundY(P.x,P.z):0)+SP.lift,P.z),M4.Ry(P.yaw+(SP.spin||0)),M4.T(0,0,BL.step*0.6),M4.S(0.95,0.95,0.95));
+ if(typeof PL!=='undefined'&&PL.dead>0)base=M4.chain(base,M4.Rx(-Math.min(1,PL.dead/0.5)*1.45));
+ const breathe=1+Math.sin(now/650)*0.015*(1-amt);
+ const roll=Math.max(-0.16,Math.min(0.16,-P.yawV*0.035*amt)),accLean=Math.max(-0.1,Math.min(0.12,P.acc*0.025));
+ const pelvis=M4.chain(base,M4.T(0,HIPY+bob-drop,0),M4.Ry(Math.sin(ph)*0.08*amt+BL.hip*0.35+0.12*st*idle),M4.Rz(roll*0.5));
+ for(const side of[1,-1]){const p=ph+(side>0?0:Math.PI);
+  const thigh=Math.sin(p)*0.55*amt+(side>0?split[0]:split[1])+kap/2,knee=(Math.cos(p)>0?0.12+Math.cos(p)*0.9:0.1+Math.max(0,-Math.sin(p))*0.12)*amt+kap+0.05*idle;
+  const tm=M4.chain(pelvis,M4.T(side*0.095,0,0),M4.Rx(-thigh));out.push([PT.thigh,tm]);
+  const sm=M4.chain(tm,M4.T(0,-TH,0),M4.Rx(knee));out.push([PT.shin,sm]);
+  out.push([PT.foot,M4.chain(sm,M4.T(0,-SH,0),M4.Rx(thigh-knee))]);}
+ const torso=M4.chain(pelvis,M4.T(0,0.16,0),M4.Ry(-Math.sin(ph)*0.12*amt*(a>0?0.3:1)+SP.tw+BL.hip*0.65-0.12*st*idle),M4.Rz(roll),M4.Rx(0.08*amt+accLean+BL.lean+0.05*st),M4.S(1,breathe,1));out.push([PT.torso,torso]);
+ const G=[-0.28+SP.gx,0.04+SP.gy+(a>0?0:Math.sin(ph)*0.04*amt),0.16+SP.gz+(a>0?0:Math.sin(ph)*0.05*amt)];
+ if(EQ==="bow")bowParts(out,torso,amt,ph);else{
+  const shR=[-0.225,0.33,0],shL=[0.225,0.33,0];
+  ikArm(out,torso,shR,G,PT.upperArm,PT.lowerR);
+  const wLocal=M4.chain(M4.T(G[0],G[1],G[2]),M4.Ry(SP.ry),M4.Rz(SP.rz),M4.Rx(SP.rx)),dsc=EQ==="dagger"?M4.S(1.45,1.45,1.45):M4.id();
+  const wm=M4.chain(torso,wLocal,dsc);out.push([WMODELS[EQ][WEAP.tier],wm]);P.weapW=M4.xp(wm,[0,EQ==="dagger"?0.3:0.8,0]);P.weapW2=null;
+  if(EQ==="dagger"){const L=SP.L,G2=[0.28+L.gx,0.04+L.gy,0.16+L.gz];ikArm(out,torso,shL,G2,PT.upperArm,PT.lowerL);
+   const wm2=M4.chain(torso,M4.T(G2[0],G2[1],G2[2]),M4.Ry(L.ry),M4.Rz(L.rz),M4.Rx(L.rx),dsc);out.push([WMODELS.dagger[WEAP.tier],wm2]);P.weapW2=M4.xp(wm2,[0,0.3,0]);}
+  else{const p=ph;const sw=Math.sin(p)*0.18*amt;
+   const free=lerp3([0.27,0.33-(UA+FA)*0.9,0.03+sw],[0.24,0.08,0.16],st*idle*0.6);
+   const grip=M4.xp(wLocal,[0,EQ==="staff"?0.3:-0.3,0]);ikArm(out,torso,shL,lerp3(free,grip,P.twoH),PT.upperArm,PT.lowerL);}}
+ const hm=M4.chain(torso,M4.T(0,0.71,0.01),M4.S(1.24,1.24,1.24),M4.Rx(-0.05*amt-BL.lean*0.5+Math.sin(ph*2)*0.02*amt));
+ out.push([PT.head,hm]);out.push([PT.face,hm]);out.push([PT.hair,hm]);
+ return out;};
+weaponGlow=(function(old){return function(){old();if(P.weapW2&&WEAP.tier>=4&&EQ==="dagger"){const k=P.weapW;P.weapW=P.weapW2;old();P.weapW=k;}};})(weaponGlow);
+
 // ================= enemies: 3D models from the original drawings =================
 const EC={skin:hex("#c08354"),skinD:hex("#a86e43"),bronze:hex("#b8863a"),bronzeD:hex("#8a5f22"),gold:hex("#d6a640"),white:hex("#efe9da"),kilt:hex("#ece4d0"),wood:hex("#6b4a2c"),
  salt:hex("#eef3f7"),saltD:hex("#c9d8e4"),hole:hex("#1d1d24"),clay:hex("#8a8c8f"),clayD:hex("#6c6e72"),glow:hex("#7fd0ff"),robe:hex("#1e1d22"),robeD:hex("#121115"),mask:hex("#f1efe8"),grey:hex("#5d5a57")};
