@@ -903,7 +903,7 @@ const joyR=()=>Math.max(50,Math.min(W,H*0.6)*0.15);
 let mapOpen=false,mapA=0;const MM={cx:0,cy:0,R:0};
 ov.addEventListener("pointerdown",e=>{if(mapOpen){mapOpen=false;e.preventDefault();return;}
  if(Math.hypot(e.clientX-MM.cx,e.clientY-MM.cy)<MM.R+6){mapOpen=true;joy.on=false;joy.ix=joy.iy=0;hideHint();e.preventDefault();return;}
- if(joy.on||busy)return;if(e.clientY<H*0.55||e.clientY>slotsEl.getBoundingClientRect().top-4)return;joy.on=true;joy.id=e.pointerId;joy.ox=joy.kx=e.clientX;joy.oy=joy.ky=e.clientY;joy.ix=joy.iy=0;ov.setPointerCapture(e.pointerId);hideHint();e.preventDefault();});
+ if(joy.on||busy)return;if(e.clientY<Math.max(H*0.2,MM.cy+MM.R+12)||e.clientY>slotsEl.getBoundingClientRect().top-4)return;joy.on=true;joy.id=e.pointerId;joy.ox=joy.kx=e.clientX;joy.oy=joy.ky=e.clientY;joy.ix=joy.iy=0;ov.setPointerCapture(e.pointerId);hideHint();e.preventDefault();});
 ov.addEventListener("pointermove",e=>{if(!joy.on||e.pointerId!==joy.id)return;const R=joyR();let dx=e.clientX-joy.ox,dy=e.clientY-joy.oy;const d=Math.hypot(dx,dy);if(d>R){dx*=R/d;dy*=R/d;}joy.kx=joy.ox+dx;joy.ky=joy.oy+dy;
  const m=Math.min(1,d/R),dead=0.12;if(m<dead){joy.ix=joy.iy=0;}else{const mm=(m-dead)/(1-dead),l=Math.hypot(dx,dy)||1;joy.ix=dx/l*mm;joy.iy=dy/l*mm;}e.preventDefault();});
 const endJ=e=>{if(e.pointerId!==joy.id)return;joy.on=false;joy.id=null;joy.ix=joy.iy=0;};ov.addEventListener("pointerup",endJ);ov.addEventListener("pointercancel",endJ);
