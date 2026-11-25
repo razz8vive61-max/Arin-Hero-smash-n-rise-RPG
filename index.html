@@ -77,6 +77,7 @@
   #invui .nm{font-weight:900;font-size:14px}
   #invui .nm i{font-style:normal;font-size:9px;background:#3fa830;color:#fff;border-radius:5px;padding:2px 5px;margin-left:5px;vertical-align:middle}
   #invui .nm i.soon{background:#8a6a3a}
+  #invui .nm u.eq{text-decoration:none;font-size:11px;background:linear-gradient(#f0c35a,#c48a2c);color:#2a1708;border-radius:6px;padding:3px 8px;margin-left:6px;cursor:pointer}
   #invui .bar{height:6px;border-radius:3px;background:rgba(255,255,255,.15);margin:5px 0 4px;overflow:hidden}
   #invui .bar i{display:block;height:100%}
   #invui .st{font-size:11px;opacity:.8}
@@ -699,7 +700,7 @@ const SPEED=3.0;
 function characterParts(){
  const amt=Math.min(1,P.spd/SPEED),ph=P.phase,out=[];
  const bob=P.moving?(Math.abs(Math.cos(ph))*0.035-0.022)*amt:0;
- const SP=staffPose(WEAP.tier,P.atk>0?Math.min(1,P.atk):0);let base=M4.chain(M4.T(P.x,(MAP?groundY(P.x,P.z):0)+SP.lift,P.z),M4.Ry(P.yaw),M4.S(0.95,0.95,0.95));const punch=0;
+ const SP=weapPose(P.atk>0?Math.min(1,P.atk):0);let base=M4.chain(M4.T(P.x,(MAP?groundY(P.x,P.z):0)+SP.lift,P.z),M4.Ry(P.yaw),M4.S(0.95,0.95,0.95));const punch=0;
  if(typeof PL!=='undefined'&&PL.dead>0)base=M4.chain(base,M4.Rx(-Math.min(1,PL.dead/0.5)*1.45));
  const breathe=1+Math.sin(performance.now()/650)*0.015*(1-amt);
  const pelvis=M4.chain(base,M4.T(0,HIPY+bob,0),M4.Ry(Math.sin(ph)*0.08*amt));
@@ -716,7 +717,7 @@ function characterParts(){
   const p=ph+Math.PI;const sw=Math.sin(p)*0.5*amt;const elbow=0.2+Math.max(0,Math.sin(p))*0.35*amt;
   const um=M4.chain(torso,M4.T(side*0.225,0.33,0),M4.Rz(side*0.12),M4.Rx(-sw));out.push([PT.upperArm,um]);
   out.push([PT.lowerL,M4.chain(um,M4.T(0,-UA,0),M4.Rx(-elbow))]);}
- out.push([STAFF[WEAP.tier],M4.chain(torso,M4.T(G[0],G[1],G[2]),M4.Ry(SP.ry),M4.Rz(SP.rz),M4.Rx(SP.rx))]);
+ out.push([WMODELS[EQ][WEAP.tier],M4.chain(torso,M4.T(G[0],G[1],G[2]),M4.Ry(SP.ry),M4.Rz(SP.rz),M4.Rx(SP.rx),EQ==="dagger"?M4.S(1.45,1.45,1.45):M4.id())]);
  const hm=M4.chain(torso,M4.T(0,0.71,0.01),M4.S(1.24,1.24,1.24),M4.Rx(-0.05*amt+Math.sin(ph*2)*0.02*amt));
  out.push([PT.head,hm]);out.push([PT.face,hm]);out.push([PT.hair,hm]);
  return out;}
@@ -787,10 +788,8 @@ const STAFF_ATK=[
  {dur:0.65,range:2.6,area:"circle",r:1.6},  // obsidian spin + slam
  {dur:0.7,range:3.0,area:"circle",r:2.0},   // star seal
  {dur:0.8,range:3.2,area:"circle",r:2.6}];  // light pillar
-let WEAP={type:"staff",tier:0,lvl:1};
-try{const w=JSON.parse(localStorage.getItem("arin_weap")||"null");if(w&&typeof w.tier==="number")WEAP=w;}catch(e){}
-function saveWeap(){try{localStorage.setItem("arin_weap",JSON.stringify(WEAP));}catch(e){}}
-const staffDamage=()=>STAFF_DMG.base[WEAP.tier]+STAFF_DMG.per[WEAP.tier]*(WEAP.lvl-1);
+let WEAP={tier:0,lvl:1};
+const staffDamage=()=>weapDamage("staff");
 // pose of the staff relative to the torso for attack progress a (0..1), strike at 0.5
 function staffPose(tier,a){const ez=x=>x*x*(3-2*x),w=a<0.5?ez(a/0.5):1,s=a<0.5?0:a<0.65?ez((a-0.5)/0.15):1,rec=a<0.75?0:ez((a-0.75)/0.25);const k=1-rec;
  // returns rotation (rx forward tilt, ry, rz), grip offset (gx,gy,gz), torso twist, body lift
@@ -805,6 +804,105 @@ function staffPose(tier,a){const ez=x=>x*x*(3-2*x),w=a<0.5?ez(a/0.5):1,s=a<0.5?0
   case 5:return L({rx:-0.1*w+0.4*s,gy:0.55*w*(1-s*0.7),gz:0.1*s});
   case 6:return L({rx:-0.6*w*(1-s)+1.1*s,gy:0.4*w*(1-s),gz:0.15*s,lift:0.7*w*(1-s)});}
  return P0;}
+
+// ================= hammer, dagger, bow: 7 tiers each (from the concept sheets) =================
+const W3={stone:hex("#8d8a84"),stoneD:hex("#6a6762"),rope:hex("#b8955a")};
+const wpart=fn=>part(mb=>{mb.smooth=true;fn(mb);});
+const pommel=(mb,y,r,col)=>mb.sph(0,y,0,r,r*0.8,r,col,6,8);
+function hHead(mb,w,h,d,y,top,side,em=0){mb.smooth=false;mb.bbox(-w,y-h,-d,w,y+h,d,Math.min(w,d)*0.25,top,side,side,em);mb.smooth=true;}
+const HAMMER=[
+ wpart(mb=>{shaft(mb,0.026,0.03,-0.5,0.62,WC.wood);ring(mb,-0.1,0.033,0.18,WC.leather);pommel(mb,-0.5,0.035,WC.woodD);
+  mb.smooth=false;mb.bbox(-0.17,0.6,-0.1,0.17,0.82,0.1,0.06,W3.stone,W3.stoneD,W3.stoneD,0);mb.smooth=true;for(const x of[-0.06,0.06])mb.xf(M4.chain(M4.T(x,0.71,0),M4.Rz(Math.PI/2)));mb.xf(null);
+  for(const x of[-0.07,0.07]){mb.cyl(x,0.59,0,0.104,0.104,0.035,10,W3.rope,false);}}),
+ wpart(mb=>{shaft(mb,0.027,0.029,-0.5,0.62,WC.woodD);for(const y of[-0.45,0.1,0.45])ring(mb,y,0.034,0.04,WC.cu);ring(mb,-0.12,0.034,0.18,WC.leather);pommel(mb,-0.52,0.04,WC.cu);
+  hHead(mb,0.17,0.1,0.09,0.72,WC.cu,WC.cuD);for(const x of[-0.12,0.12]){mb.xf(M4.chain(M4.T(x,0.72,0),M4.Rz(Math.PI/2)));mb.cyl(0,-0.0,0,0.1,0.1,0.025,4,WC.cuD,false);}mb.xf(null);}),
+ wpart(mb=>{shaft(mb,0.027,0.029,-0.5,0.62,WC.brD);for(let k=0;k<5;k++)ring(mb,-0.42+k*0.22,0.033,0.03,WC.br);pommel(mb,-0.52,0.05,WC.br);mb.sph(0,-0.52,0.04,0.025,0.025,0.02,WC.brD,4,6);
+  hHead(mb,0.18,0.11,0.1,0.73,WC.br,WC.brD);mb.sph(0,0.73,0.1,0.06,0.06,0.025,WC.gold,6,10);mb.sph(0,0.73,-0.1,0.06,0.06,0.025,WC.gold,6,10);
+  for(const s of[-1,1]){mb.xf(M4.chain(M4.T(s*0.18,0.73,0),M4.Rz(-s*Math.PI/2)));mb.cyl(0,0,0,0.1,0.11,0.03,8,WC.gold,true);}mb.xf(null);}),
+ wpart(mb=>{shaft(mb,0.028,0.03,-0.5,0.62,WC.feD);for(const y of[-0.3,0.2])ring(mb,y,0.035,0.06,WC.fe);ring(mb,-0.1,0.035,0.18,WC.leather);pommel(mb,-0.52,0.045,WC.fe);
+  hHead(mb,0.17,0.1,0.1,0.72,WC.fe,WC.feD);mb.smooth=false;for(const y of[0.66,0.72,0.78]){mb.xf(M4.chain(M4.T(-0.17,y,0),M4.Rz(Math.PI/2)));mb.cyl(0,0,0,0.03,0,0.1,5,WC.fe);}mb.xf(null);mb.cyl(0,0.82,0,0.035,0,0.12,5,WC.fe);mb.smooth=true;}),
+ wpart(mb=>{for(let k=0;k<10;k++){mb.xf(M4.chain(M4.T(0,-0.5+k*0.112,0),M4.Ry(k*0.6)));mb.cyl(0,0,0,0.03,0.027,0.115,6,k%2?WC.ob:WC.obD,false);}mb.xf(null);
+  hHead(mb,0.18,0.11,0.1,0.73,WC.ob,WC.obD);mb.smooth=false;
+  for(const[x,y,a,l]of[[-0.1,0.73,0.6,0.12],[0.05,0.76,-0.8,0.1],[0.12,0.7,0.3,0.08]]){mb.xf(M4.chain(M4.T(x,y,0.101),M4.Rz(a)));mb.box(-0.006,-l/2,0,0.006,l/2,0.008,WC.purple,WC.purple,null,1);mb.xf(M4.chain(M4.T(x,y,-0.109),M4.Rz(a)));mb.box(-0.006,-l/2,0,0.006,l/2,0.008,WC.purple,WC.purple,null,1);}mb.xf(null);
+  mb.xf(M4.chain(M4.T(0,-0.52,0),M4.Rx(Math.PI)));mb.cyl(0,0,0,0.04,0,0.12,5,WC.purple,true,1);mb.xf(null);mb.smooth=true;}),
+ wpart(mb=>{shaft(mb,0.028,0.028,-0.5,0.62,WC.gold);for(let k=0;k<5;k++)ring(mb,-0.42+k*0.2,0.032,0.08,WC.lapis);pommel(mb,-0.52,0.045,WC.gold);mb.sph(0,-0.58,0,0.03,0.03,0.03,WC.lapis,5,8);
+  hHead(mb,0.15,0.11,0.11,0.73,WC.lapis,WC.lapisD);for(const s of[-1,1]){mb.xf(M4.chain(M4.T(s*0.15,0.73,0),M4.Rz(-s*Math.PI/2)));mb.cyl(0,0,0,0.12,0.12,0.05,12,WC.gold,true);}mb.xf(null);
+  mb.smooth=false;for(const zz of[0.112,-0.112]){const c=[0,0.73,zz];for(let k=0;k<8;k++){const a=k/8*Math.PI*2,L=k%2?0.05:0.075;mb.tri(c,[Math.cos(a)*L,0.73+Math.sin(a)*L,zz],[Math.cos(a+0.4)*0.025,0.73+Math.sin(a+0.4)*0.025,zz],WC.gold,[0,0.73,0],0);mb.tri(c,[Math.cos(a)*L,0.73+Math.sin(a)*L,zz],[Math.cos(a-0.4)*0.025,0.73+Math.sin(a-0.4)*0.025,zz],WC.goldD,[0,0.73,0],0);}}mb.smooth=true;}),
+ wpart(mb=>{shaft(mb,0.027,0.029,-0.5,0.62,WC.cel);for(let k=0;k<4;k++)ring(mb,-0.4+k*0.28,0.033,0.03,WC.celG);pommel(mb,-0.52,0.045,WC.celG);
+  hHead(mb,0.17,0.11,0.1,0.73,WC.cel,WC.celG,1);mb.sph(0,0.73,0.1,0.06,0.06,0.03,hex("#ffffff"),6,10,1);mb.sph(0,0.73,-0.1,0.06,0.06,0.03,hex("#ffffff"),6,10,1);
+  mb.smooth=false;for(let k=0;k<8;k++){const a=k/8*Math.PI*2;mb.xf(M4.chain(M4.T(0,0.73,0),M4.Rz(a)));mb.cyl(0,0.13,0,0.02,0,0.12,4,WC.celG,true,1);}mb.xf(null);mb.smooth=true;})
+];
+// dagger blade from a profile [y, half width, x offset]
+function blade(mb,prof,th,col,edge,em=0){mb.smooth=false;for(let k=0;k<prof.length-1;k++){const[a,wa,oa]=prof[k],[b,wb,ob]=prof[k+1];
+  for(const s of[1,-1]){mb.quad([oa-wa,a,0],[oa+wa,a,0],[ob+wb,b,0],[ob-wb,b,0],col,[0,(a+b)/2,-s],em);}
+  mb.quad([oa-wa,a,th],[oa-wa,a,-th],[ob-wb,b,-th],[ob-wb,b,th],edge,[oa,(a+b)/2,0],em);mb.quad([oa+wa,a,th],[oa+wa,a,-th],[ob+wb,b,-th],[ob+wb,b,th],edge,[oa,(a+b)/2,0],em);}
+ // thickness: front/back planes offset
+ for(let k=0;k<prof.length-1;k++){const[a,wa,oa]=prof[k],[b,wb,ob]=prof[k+1];mb.quad([oa-wa,a,th],[oa+wa,a,th],[ob+wb,b,th],[ob-wb,b,th],col,[oa,(a+b)/2,-1],em);mb.quad([oa-wa,a,-th],[oa+wa,a,-th],[ob+wb,b,-th],[ob-wb,b,-th],col,[oa,(a+b)/2,1],em);}
+ mb.smooth=true;}
+const leaf=(L,W,curve=0)=>{const p=[];for(let k=0;k<=8;k++){const t=k/8;p.push([0.1+t*L,W*(t<0.15?0.75+t*1.6:Math.sin(Math.PI*Math.min(1,0.25+t*0.8))*(1-t*0.55))+(k===8?-W:0),curve*t*t]);}p[8][1]=0.002;return p;};
+const DAGGER=[
+ wpart(mb=>{blade(mb,leaf(0.34,0.045,0.05),0.012,WC.bone,hex("#d8ccb2"));ring(mb,-0.06,0.024,0.14,WC.leather);mb.sph(0,-0.08,0,0.032,0.03,0.032,WC.bone,5,8);mb.cyl(0,0.08,0,0.03,0.03,0.025,8,WC.bone);}),
+ wpart(mb=>{blade(mb,leaf(0.34,0.048),0.012,WC.cu,WC.cuD);ring(mb,-0.06,0.023,0.14,WC.wood);mb.smooth=false;mb.bbox(-0.07,0.075,-0.02,0.07,0.1,0.02,0.008,WC.cu,WC.cuD,WC.cuD,0);mb.smooth=true;pommel(mb,-0.08,0.03,WC.cuD);}),
+ wpart(mb=>{blade(mb,leaf(0.36,0.06),0.012,WC.br,WC.gold);ring(mb,-0.06,0.024,0.14,WC.brD);mb.smooth=false;mb.bbox(-0.085,0.075,-0.022,0.085,0.105,0.022,0.01,WC.br,WC.brD,WC.brD,0);mb.smooth=true;
+  for(const s of[-1,1])mb.sph(s*0.085,0.09,0,0.02,0.02,0.02,WC.gold,4,6);pommel(mb,-0.09,0.035,WC.br);}),
+ wpart(mb=>{blade(mb,leaf(0.36,0.05,-0.09),0.012,WC.fe,hex("#b6bcc6"));ring(mb,-0.06,0.024,0.14,hex("#26272b"));mb.smooth=false;mb.bbox(-0.075,0.075,-0.02,0.075,0.1,0.02,0.008,WC.fe,WC.feD,WC.feD,0);mb.smooth=true;pommel(mb,-0.09,0.032,WC.fe);}),
+ wpart(mb=>{blade(mb,leaf(0.38,0.05),0.013,WC.ob,WC.purple,0);blade(mb,leaf(0.36,0.012),0.016,WC.purple,WC.purple,1);ring(mb,-0.06,0.024,0.14,WC.obD);mb.smooth=false;mb.bbox(-0.06,0.075,-0.025,0.06,0.1,0.025,0.01,WC.obD,WC.ob,WC.ob,0);mb.smooth=true;
+  mb.xf(M4.chain(M4.T(0,-0.1,0),M4.Rx(Math.PI)));mb.smooth=false;mb.cyl(0,0,0,0.03,0,0.07,5,WC.purple,true,1);mb.smooth=true;mb.xf(null);}),
+ wpart(mb=>{blade(mb,leaf(0.38,0.055),0.012,WC.gold,WC.goldD);blade(mb,leaf(0.26,0.012).map(q=>[q[0]+0.03,q[1],q[2]]),0.015,WC.lapis,WC.lapisD);ring(mb,-0.06,0.025,0.14,WC.lapis);
+  mb.smooth=false;mb.bbox(-0.09,0.075,-0.024,0.09,0.11,0.024,0.012,WC.gold,WC.goldD,WC.goldD,0);mb.smooth=true;for(const s of[-1,1])mb.sph(s*0.09,0.092,0,0.025,0.025,0.025,WC.lapis,5,8);mb.sph(0,0.092,0.025,0.02,0.02,0.012,WC.lapis,4,6);pommel(mb,-0.09,0.035,WC.gold);}),
+ wpart(mb=>{blade(mb,leaf(0.4,0.06),0.013,WC.cel,WC.celG,1);ring(mb,-0.06,0.025,0.14,WC.cel);mb.smooth=false;mb.bbox(-0.1,0.075,-0.024,0.1,0.11,0.024,0.012,WC.celG,WC.cel,WC.cel,1);
+  for(const s of[-1,1]){mb.xf(M4.chain(M4.T(s*0.1,0.09,0),M4.Rz(-s*1.2)));mb.cyl(0,0,0,0.02,0,0.08,4,WC.celG,true,1);}mb.xf(null);mb.smooth=true;mb.sph(0,-0.1,0,0.035,0.035,0.035,hex("#ffffff"),5,8,1);})
+];
+// bow: limbs bend forward (+z), string at the back; f(y) gives the limb's forward offset
+function bowMesh(mb,cols,opts){const L=0.62,seg=12,rec=opts.recurve||0;const fz=y=>{const t=Math.abs(y)/L;return 0.16*(1-t*t)-rec*Math.max(0,t-0.8)*0.9;};
+ for(let k=0;k<seg;k++){const y0=-L+k/seg*2*L,y1=-L+(k+1)/seg*2*L,z0=fz(y0),z1=fz(y1),len=Math.hypot(y1-y0,z1-z0),r=0.024*(1-Math.abs((y0+y1)/2)/L*0.55)*(opts.thick||1);
+  mb.xf(M4.chain(M4.T(0,y0,z0),M4.Rx(Math.atan2(z1-z0,y1-y0))));mb.cyl(0,0,0,r,r*0.95,len+0.004,opts.angular?4:8,k%2&&cols.alt?cols.alt:cols.limb,false,opts.em||0);}
+ mb.xf(null);ring(mb,-0.07,0.032,0.14,cols.grip);if(cols.band)for(const y of[-0.42,0.42])mb.cyl(0,y,fz(y),0.03,0.03,0.03,8,cols.band,false);
+ for(const s of[-1,1])mb.sph(0,s*L,fz(s*L),0.03,0.03,0.03,cols.tip,5,8,opts.em||0);
+ mb.cyl(0,-L,fz(-L)-0.005,0.005,0.005,2*L,4,cols.str,false,opts.strEm||0);}
+const BOW=[
+ wpart(mb=>bowMesh(mb,{limb:WC.wood,grip:WC.leather,tip:WC.bone,str:hex("#d8c9a8")},{})),
+ wpart(mb=>bowMesh(mb,{limb:WC.woodD,alt:hex("#8a5a34"),grip:WC.leather,band:WC.cu,tip:WC.cu,str:hex("#d8c9a8")},{})),
+ wpart(mb=>bowMesh(mb,{limb:WC.br,alt:WC.brD,grip:hex("#2b4a5a"),band:WC.gold,tip:WC.gold,str:hex("#e8dcc0")},{recurve:0.25})),
+ wpart(mb=>bowMesh(mb,{limb:WC.fe,alt:WC.feD,grip:hex("#26272b"),band:hex("#2b4a5a"),tip:WC.fe,str:hex("#c8ccd2")},{recurve:0.35,angular:true,thick:1.15})),
+ wpart(mb=>bowMesh(mb,{limb:WC.ob,alt:WC.obD,grip:WC.obD,band:WC.purple,tip:WC.purple,str:WC.purple},{recurve:0.35,angular:true,strEm:1})),
+ wpart(mb=>{bowMesh(mb,{limb:WC.gold,alt:WC.lapis,grip:WC.lapisD,band:WC.gold,tip:WC.lapis,str:hex("#f0e6c8")},{recurve:0.3});mb.sph(0,0.02,0.18,0.045,0.045,0.02,WC.gold,6,8);}),
+ wpart(mb=>{bowMesh(mb,{limb:WC.cel,alt:WC.celG,grip:WC.celG,band:WC.celG,tip:hex("#ffffff"),str:hex("#fff6d8")},{recurve:0.3,em:1,strEm:1});mb.sph(0,0.02,0.18,0.06,0.06,0.025,hex("#ffffff"),6,10,1);})
+];
+const ARROW=TIER_COL.map((c,i)=>wpart(mb=>{const tc=hex(c);mb.cyl(0,-0.32,0,0.009,0.009,0.6,5,i===6?WC.cel:WC.wood,false,i===6?1:0);mb.cyl(0,0.28,0,0.025,0,0.09,6,tc,true,i>=4?1:0);
+ mb.smooth=false;for(let k=0;k<3;k++){mb.xf(M4.Ry(k*2.094));mb.quad([0,-0.32,0],[0,-0.2,0],[0.035,-0.24,0],[0.035,-0.33,0],tc,[0,-0.27,1],i>=4?1:0);mb.quad([0,-0.32,0],[0,-0.2,0],[0.035,-0.24,0],[0.035,-0.33,0],tc,[0,-0.27,-1],i>=4?1:0);}mb.xf(null);mb.smooth=true;}));
+// per-type data
+const WNAME={staff:"Asa",hammer:"Çekiç",dagger:"Hançer",bow:"Yay"};
+const WMODELS={staff:STAFF,hammer:HAMMER,dagger:DAGGER,bow:BOW};
+const WFACT={staff:1,hammer:2,dagger:0.4,bow:0.8};
+const WATK={hammer:{dur:0.85,cd:1.4,range:1.9,area:"circle",r:1.3},dagger:{dur:0.24,cd:0.3,range:1.5,area:"single"},bow:{dur:0.5,cd:0.8,range:7.5,area:"arrow"}};
+let EQ="staff",WSTATE={staff:{tier:0,lvl:1},hammer:{tier:0,lvl:1},dagger:{tier:0,lvl:1},bow:{tier:0,lvl:1}};
+try{const s=JSON.parse(localStorage.getItem("arin_weap2")||"null");if(s&&s.s){WSTATE=Object.assign(WSTATE,s.s);EQ=s.eq||"staff";}else{const w=JSON.parse(localStorage.getItem("arin_weap")||"null");if(w&&typeof w.tier==="number")WSTATE.staff={tier:w.tier,lvl:w.lvl};}}catch(e){}
+WEAP=WSTATE[EQ];
+function saveWeap(){try{localStorage.setItem("arin_weap2",JSON.stringify({eq:EQ,s:WSTATE}));}catch(e){}}
+const curAtk=()=>EQ==="staff"?STAFF_ATK[WEAP.tier]:WATK[EQ];
+const atkCd=()=>EQ==="staff"?Math.max(0.7,STAFF_ATK[WEAP.tier].dur+0.12):WATK[EQ].cd;
+function weapDamage(type=EQ){const s=WSTATE[type],f=WFACT[type];return Math.max(1,Math.round(STAFF_DMG.base[s.tier]*f))+Math.max(1,Math.round(STAFF_DMG.per[s.tier]*f))*(s.lvl-1);}
+const weapName=(t=EQ)=>TIER_NAMES[WSTATE[t].tier]+" "+WNAME[t];
+function equip(t){EQ=t;WEAP=WSTATE[t];P.atk=0;saveWeap();updWeapUI();}
+// generic poses until the per-tier animations are designed
+function weapPose(a){if(EQ==="staff")return staffPose(WEAP.tier,a);const ez=x=>x*x*(3-2*x),w=a<0.5?ez(a/0.5):1,s=a<0.5?0:a<0.65?ez((a-0.5)/0.15):1,k=1-(a<0.75?0:ez((a-0.75)/0.25));
+ const P0={rx:0.15,ry:0,rz:0,gx:0,gy:0,gz:0,tw:0,lift:0};
+ if(EQ==="hammer"){if(a<=0)return{...P0,rx:0.1};return{rx:(-1.6*w*(1-s)+1.55*s)*k+0.1,ry:0,rz:0,gx:0,gy:0.3*w*(1-s)*k,gz:0.18*s*k,tw:0.25*s*k,lift:0.05*w*(1-s)*k};}
+ if(EQ==="dagger"){if(a<=0)return{...P0,rx:0.9,gy:-0.05};return{rx:(0.9+0.6*Math.min(1,w*2))*1,ry:0,rz:0,gx:0.02,gy:-0.02,gz:(-0.15*w*(1-s)+0.5*s)*k,tw:(-0.3*w+0.45*s)*k,lift:0};}
+ if(EQ==="bow"){if(a<=0)return{...P0,rx:0.05,gx:0.08,gy:0.1,gz:0.05,ry:0.1};return{rx:0.05,ry:0.1,rz:0,gx:0.08,gy:0.16,gz:0.05+0.18*Math.min(1,w*1.4)*k,tw:-0.25*k,lift:0};}
+ return P0;}
+let ARROWS=[];
+function weapStrike(){if(EQ==="staff")return staffStrike();const T=WATK[EQ],tg=PL.target;if(!tg)return;const crit=Math.random()<(EQ==="dagger"?0.25:0.15);let dm=Math.round(weapDamage()*(0.9+Math.random()*0.2));if(crit)dm*=2;
+ if(EQ==="bow"){const fx=Math.sin(P.yaw),fz=Math.cos(P.yaw);ARROWS.push({x:P.x+fx*0.3,y:1.05,z:P.z+fz*0.3,tg,dm,crit,t:0,tier:WEAP.tier});return;}
+ if(EQ==="dagger"){damageEnemy(tg,dm,crit);FX.push({k:"thrust",x:P.x,y:1.0,z:P.z,yaw:P.yaw,t:0,life:0.14,short:true,col:"230,235,255"});return;}
+ // hammer: ground slam around the target
+ for(const e of ENEMIES){if(e.state==="dead")continue;if(Math.hypot(e.x-tg.x,e.z-tg.z)<T.r+ETYPE[e.t].r)damageEnemy(e,e===tg?dm:Math.round(dm*0.7),e===tg&&crit);}
+ FX.push({k:"ring",x:tg.x,y:0.05,z:tg.z,t:0,life:0.45,r0:0.3,r1:1.6,col:"240,215,170"});fxChunks(tg.x,0.2,tg.z,8,["#b89a6a","#8d8a84"],3,1);fxSmoke(tg.x,0.2,tg.z,4,"200,185,150");SHAKE=Math.max(SHAKE,0.16);HITSTOP=Math.max(HITSTOP,0.05);}
+function updArrows(dt){for(const a of ARROWS){a.t+=dt;const tx=a.tg.x,tz=a.tg.z,ty=0.95,dx=tx-a.x,dy=ty-a.y,dz=tz-a.z,d=Math.hypot(dx,dy,dz),sp=22*dt;
+  if(a.tg.state==="dead"||a.t>1.2){a.done=true;continue;}if(d<sp+0.25){a.done=true;damageEnemy(a.tg,a.dm,a.crit);fxSparks(tx,ty,tz,6,"255,236,180",3);continue;}
+  a.x+=dx/d*sp;a.y+=dy/d*sp;a.z+=dz/d*sp;a.yaw=Math.atan2(dx,dz);a.pitch=Math.atan2(dy,Math.hypot(dx,dz));}ARROWS=ARROWS.filter(a=>!a.done);}
+function arrowParts(){return ARROWS.map(a=>[ARROW[a.tier],M4.chain(M4.T(a.x,a.y,a.z),M4.Ry(a.yaw||0),M4.Rx(Math.PI/2-(a.pitch||0)))]);}
 
 // ================= enemies: 3D models from the original drawings =================
 const EC={skin:hex("#c08354"),skinD:hex("#a86e43"),bronze:hex("#b8863a"),bronzeD:hex("#8a5f22"),gold:hex("#d6a640"),white:hex("#efe9da"),kilt:hex("#ece4d0"),wood:hex("#6b4a2c"),
@@ -962,11 +1060,11 @@ function updCombat(dt){
  // auto attack: nearest living enemy in reach
  PL.atkCd=Math.max(0,PL.atkCd-dt);let best=null,bd=1e9;
  for(const e of ENEMIES){if(e.state==="dead")continue;const d=Math.hypot(e.x-P.x,e.z-P.z);if(d<bd){bd=d;best=e;}}
- PL.target=best&&bd<STAFF_ATK[WEAP.tier].range+ETYPE[best.t].r?best:null;
- if(PL.target&&PL.atkCd<=0&&P.atk<=0){P.atk=0.0001;P.atkHit=false;PL.atkCd=Math.max(0.7,STAFF_ATK[WEAP.tier].dur+0.12);}
+ PL.target=best&&bd<curAtk().range+ETYPE[best.t].r?best:null;
+ if(PL.target&&PL.atkCd<=0&&P.atk<=0){P.atk=0.0001;P.atkHit=false;PL.atkCd=atkCd();}
  if(PL.target&&!P.moving)P.tYaw=Math.atan2(PL.target.x-P.x,PL.target.z-P.z);
- if(P.atk>0){P.atk+=dt/STAFF_ATK[WEAP.tier].dur;if(!P.atkHit&&P.atk>=0.5){P.atkHit=true;staffStrike();}if(P.atk>=1)P.atk=0;}
- updDrops(dt);
+ if(P.atk>0){P.atk+=dt/curAtk().dur;if(!P.atkHit&&P.atk>=0.5){P.atkHit=true;weapStrike();}if(P.atk>=1)P.atk=0;}
+ updDrops(dt);updArrows(dt);
  // enemies: shared path field toward the player
  {const px=Math.floor(P.x),pz=Math.floor(P.z);flowT-=dt;if(!FLOW||flowT<=0||FLOW.cx!==px||FLOW.cz!==pz){FLOW=bfsField(px,pz,FR);FLOW.cx=px;FLOW.cz=pz;flowT=0.6;}}
  for(const e of ENEMIES){const T=ETYPE[e.t];e.flash=Math.max(0,e.flash-dt);e.hitT=Math.max(0,(e.hitT||0)-dt);e.showHp=Math.max(0,e.showHp-dt);
@@ -1083,12 +1181,12 @@ function staffFX(tier,cx,cz,dx,dz){const yaw=Math.atan2(dx,dz);
  else if(tier===5){FX.push({k:"seal",x:cx,y:0.06,z:cz,t:0,life:0.8,r:2.0});fxSparks(cx,0.4,cz,16,"120,160,255",5);fxSparks(cx,0.4,cz,10,"255,215,110",5);SHAKE=Math.max(SHAKE,0.12);}
  else{FX.push({k:"pillar",x:cx,y:0,z:cz,t:0,life:0.7,r:0.9});FX.push({k:"ring",x:cx,y:0.06,z:cz,t:0,life:0.6,r0:0.4,r1:2.8,col:"255,236,170"});
   for(let k=0;k<18;k++){const a=Math.random()*6.283,r=Math.random()*1.6;FX.push({k:"spark",x:cx+Math.cos(a)*r,y:0.1,z:cz+Math.sin(a)*r,vx:0,vy:rnd(2,4.5),vz:0,t:0,life:rnd(0.5,0.9),col:"255,230,150",up:true});}SHAKE=Math.max(SHAKE,0.22);HITSTOP=Math.max(HITSTOP,0.06);}}
-function addWeaponLevels(n){WEAP.lvl+=n;addFloat(P.x,2.25,P.z,"+"+n+" Asa",TIER_COL[WEAP.tier],false);
+function addWeaponLevels(n){WEAP.lvl+=n;addFloat(P.x,2.25,P.z,"+"+n+" "+WNAME[EQ],TIER_COL[WEAP.tier],false);
  while(WEAP.lvl>=100&&WEAP.tier<6){WEAP.tier++;WEAP.lvl=1+(WEAP.lvl-100);tierUpFX();}
  if(WEAP.tier===6)WEAP.lvl=Math.min(100,WEAP.lvl);saveWeap();updWeapUI();}
 function tierUpFX(){FX.push({k:"ring",x:P.x,y:0.08,z:P.z,t:0,life:0.9,r0:0.3,r1:3.2,col:"255,230,150"});FX.push({k:"pillar",x:P.x,y:0,z:P.z,t:0,life:0.9,r:0.7});
  for(let k=0;k<24;k++){const a=Math.random()*6.283;FX.push({k:"spark",x:P.x+Math.cos(a)*0.5,y:0.2,z:P.z+Math.sin(a)*0.5,vx:Math.cos(a)*1.5,vy:rnd(2,5),vz:Math.sin(a)*1.5,t:0,life:rnd(0.6,1.1),col:"255,226,140",up:true});}
- toastEl.querySelector("b").textContent=TIER_NAMES[WEAP.tier]+" Asa";toastEl.querySelector("span").textContent="Silahın yeni kademeye ulaştı!";toastEl.style.opacity=1;clearTimeout(enterRegion.t);enterRegion.t=setTimeout(()=>toastEl.style.opacity=0,2600);}
+ toastEl.querySelector("b").textContent=weapName();toastEl.querySelector("span").textContent="Silahın yeni kademeye ulaştı!";toastEl.style.opacity=1;clearTimeout(enterRegion.t);enterRegion.t=setTimeout(()=>toastEl.style.opacity=0,2600);}
 function spawnDrop(e){if(Math.random()>0.45)return;const gain=1+Math.floor(Math.random()*2)+e.r;DROPS.push({x:e.x,z:e.z,t:0,gain,vy:3,y:0.6});}
 function updDrops(dt){for(const d of DROPS){d.t+=dt;if(d.y>0.55||d.vy>0){d.vy-=9*dt;d.y+=d.vy*dt;if(d.y<0.55){d.y=0.55;d.vy=0;}}
   const dist=Math.hypot(P.x-d.x,P.z-d.z);if(d.t>0.5&&dist<3.2&&PL.dead===0){const s=Math.min(1,dt*(8/Math.max(0.4,dist)));d.x+=(P.x-d.x)*s;d.z+=(P.z-d.z)*s;}
@@ -1096,15 +1194,15 @@ function updDrops(dt){for(const d of DROPS){d.t+=dt;if(d.y>0.55||d.vy>0){d.vy-=9
  DROPS=DROPS.filter(d=>!d.done&&d.t<45);
  if(WEAP.tier===6){runeT-=dt;if(runeT<=0){runeT=0.12;const a=Math.random()*6.283;FX.push({k:"spark",x:P.x+Math.cos(a)*0.45,y:0.3+Math.random()*0.8,z:P.z+Math.sin(a)*0.45,vx:0,vy:rnd(0.6,1.4),vz:0,t:0,life:0.7,col:"255,230,150",up:true});}}}
 function dropParts(){const out=[];const tnow=performance.now()/1000;for(const d of DROPS){if(Math.hypot(d.x-cam.x,d.z-(cam.z-3))>28)continue;
-  out.push([STAFF[WEAP.tier],M4.chain(M4.T(d.x,d.y+Math.sin(tnow*3+d.x)*0.06,d.z),M4.Ry(tnow*2.2+d.x),M4.Rz(0.5),M4.S(0.55,0.55,0.55))]);}return out;}
+  out.push([WMODELS[EQ][WEAP.tier],M4.chain(M4.T(d.x,d.y+Math.sin(tnow*3+d.x)*0.06,d.z),M4.Ry(tnow*2.2+d.x),M4.Rz(0.5),M4.S(0.55,0.55,0.55))]);}return out;}
 function drawDrops(){for(const d of DROPS){const s=toScreen([d.x,0.05,d.z]);if(s[2]<0)continue;const[,ppm]=ppmAt(d.x,0.05,d.z);const pulse=0.75+0.25*Math.sin(performance.now()/180+d.x);
   oc.globalCompositeOperation="lighter";const g=oc.createRadialGradient(s[0],s[1],0,s[0],s[1],ppm*0.6);g.addColorStop(0,TIER_COL[WEAP.tier]);g.addColorStop(1,"rgba(0,0,0,0)");oc.globalAlpha=0.55*pulse;oc.fillStyle=g;oc.beginPath();oc.ellipse(s[0],s[1],ppm*0.6,ppm*0.34,0,0,7);oc.fill();
   oc.globalCompositeOperation="source-over";oc.globalAlpha=1;}}
 // weapon slot (UI)
 const wsEl=document.createElement("div");wsEl.id="wslot";document.body.appendChild(wsEl);
-function updWeapUI(){const n=TIER_NAMES[WEAP.tier]+" Asa",col=TIER_COL[WEAP.tier];
- wsEl.innerHTML=`<div class="wi" style="border-color:${col};box-shadow:0 0 10px ${col}88"><svg viewBox="0 0 24 24" width="26" height="26"><path d="M7 21 L15 7" stroke="${col}" stroke-width="2.6" stroke-linecap="round"/><circle cx="16" cy="5.5" r="3" fill="${col}"/></svg><b>${WEAP.tier+1}</b></div>
- <div class="wt"><div class="wn" style="color:${col}">${n}</div><div class="wb"><i style="width:${WEAP.tier===6&&WEAP.lvl>=100?100:WEAP.lvl}%;background:${col}"></i></div><div class="wl">Sv ${WEAP.lvl}${WEAP.tier===6&&WEAP.lvl>=100?" · MAKS":" / 100"} · Hasar ${staffDamage()}</div></div>`;}
+function updWeapUI(){const n=weapName(),col=TIER_COL[WEAP.tier];
+ wsEl.innerHTML=`<div class="wi" style="border-color:${col};box-shadow:0 0 10px ${col}88">${window.__wIconReady?wIcon(EQ,col):""}<b>${WEAP.tier+1}</b></div>
+ <div class="wt"><div class="wn" style="color:${col}">${n}</div><div class="wb"><i style="width:${WEAP.tier===6&&WEAP.lvl>=100?100:WEAP.lvl}%;background:${col}"></i></div><div class="wl">Sv ${WEAP.lvl}${WEAP.tier===6&&WEAP.lvl>=100?" · MAKS":" / 100"} · Hasar ${weapDamage()}</div></div>`;}
 wsEl.addEventListener("pointerdown",e=>{e.stopPropagation();e.preventDefault();invTab="w";openInv();});
 updWeapUI();
 
@@ -1112,7 +1210,6 @@ updWeapUI();
 const CH_KILLS=8;let CHEST={n:3,kills:0,own:{staff:true,hammer:false,dagger:false,bow:false}};
 try{const c=JSON.parse(localStorage.getItem("arin_chest")||"null");if(c&&typeof c.n==="number")CHEST=Object.assign(CHEST,c);}catch(e){}
 function saveChest(){try{localStorage.setItem("arin_chest",JSON.stringify(CHEST));}catch(e){}}
-const WNAME={staff:"Asa",hammer:"Çekiç",dagger:"Hançer",bow:"Yay"};
 const CHEST_SVG=(open)=>`<svg viewBox="0 0 120 100" class="chsvg">
  <defs><linearGradient id="cw" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9a6a3c"/><stop offset="1" stop-color="#5e3a1e"/></linearGradient>
  <linearGradient id="cb" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f0c35a"/><stop offset="1" stop-color="#a8742e"/></linearGradient></defs>
@@ -1132,15 +1229,15 @@ function chestKill(){CHEST.kills++;if(CHEST.kills%CH_KILLS===0){CHEST.n++;addFlo
 function rollChest(){// a new weapon type sometimes, otherwise staff levels
  const locked=["hammer","dagger","bow"].filter(k=>!CHEST.own[k]);
  if(locked.length&&Math.random()<0.18){const k=locked[Math.floor(Math.random()*locked.length)];CHEST.own[k]=true;return{kind:"new",w:k};}
- const lv=4+Math.floor(Math.random()*5)+(Math.random()<0.15?8:0);return{kind:"lvl",w:"staff",n:lv};}
-function renderChestUI(stage,rw){const own=Object.keys(WNAME).map(k=>`<div class="ow ${CHEST.own[k]?"on":""}"><span>${WNAME[k]}</span><small>${!CHEST.own[k]?"kilitli":k==="staff"?TIER_NAMES[WEAP.tier]+" · Sv "+WEAP.lvl:"yakında"}</small></div>`).join("");
+ const lv=4+Math.floor(Math.random()*5)+(Math.random()<0.15?8:0);return{kind:"lvl",w:EQ,n:lv};}
+function renderChestUI(stage,rw){const own=Object.keys(WNAME).map(k=>`<div class="ow ${CHEST.own[k]?"on":""}"><span>${WNAME[k]}</span><small>${!CHEST.own[k]?"kilitli":TIER_NAMES[WSTATE[k].tier]+" · Sv "+WSTATE[k].lvl}</small></div>`).join("");
  let body="";
  if(stage==="closed")body=`<div class="stage">${CHEST_SVG(false)}</div><button class="go" ${CHEST.n?"":"disabled"}>${CHEST.n?"Sandığı Aç":"Sandık yok"}</button>
   <p class="hint">${CHEST.n?CHEST.n+" sandığın var":"Düşman öldürerek sandık kazan ("+(CH_KILLS-CHEST.kills%CH_KILLS)+" düşman kaldı)"}</p>`;
  else if(stage==="opening")body=`<div class="stage shake">${CHEST_SVG(false)}</div><p class="hint">&nbsp;</p>`;
  else{const col=rw.kind==="new"?"#ffd35a":TIER_COL[WEAP.tier];
   const card=rw.kind==="new"?`<div class="rw" style="border-color:${col}"><div class="rt">YENİ SİLAH!</div><div class="rn" style="color:${col}">${WNAME[rw.w]}</div><div class="rd">Koleksiyonuna eklendi</div></div>`
-   :`<div class="rw" style="border-color:${col}"><div class="rt">+${rw.n} seviye</div><div class="rn" style="color:${col}">${TIER_NAMES[WEAP.tier]} Asa</div><div class="rd">Sv ${WEAP.lvl} · Hasar ${staffDamage()}</div></div>`;
+   :`<div class="rw" style="border-color:${col}"><div class="rt">+${rw.n} seviye</div><div class="rn" style="color:${col}">${weapName()}</div><div class="rd">Sv ${WEAP.lvl} · Hasar ${weapDamage()}</div></div>`;
   body=`<div class="stage opened"><div class="rays"></div>${CHEST_SVG(true)}</div>${card}<button class="go">${CHEST.n?"Bir tane daha aç ("+CHEST.n+")":"Tamam"}</button>`;}
  chUI.innerHTML=`<div class="panel"><div class="hd"><span>Sandıklar</span><i class="x">✕</i></div>${body}<div class="own">${own}</div></div>`;
  chUI.querySelector(".x").onclick=closeChestUI;const go=chUI.querySelector(".go");
@@ -1160,30 +1257,34 @@ const WICON={staff:'<path d="M7 21 L15 7" stroke-width="2.6" stroke-linecap="rou
  hammer:'<path d="M9 21 L13 10" stroke-width="2.4" stroke-linecap="round"/><rect x="8" y="3" width="11" height="7" rx="1.5" transform="rotate(20 13 6)"/>',
  dagger:'<path d="M12 3 L14 13 L12 15 L10 13 Z"/><path d="M8 15 H16 M12 15 V21" stroke-width="2.2" stroke-linecap="round"/>',
  bow:'<path d="M7 3 Q18 12 7 21" fill="none" stroke-width="2.4"/><path d="M7 3 V21" stroke-width="1"/><path d="M5 12 H19 M16 9 L19 12 L16 15" stroke-width="1.8" fill="none" stroke-linecap="round"/>'};
-const wIcon=(k,col)=>`<svg viewBox="0 0 24 24" width="30" height="30" fill="${col}" stroke="${col}">${WICON[k]}</svg>`;
+const wIcon=(k,col)=>`<svg viewBox="0 0 24 24" width="30" height="30" fill="${col}" stroke="${col}">${WICON[k]}</svg>`;window.__wIconReady=true;
 const invBtn=document.createElement("div");invBtn.id="invbtn";invBtn.innerHTML='<svg viewBox="0 0 32 32" width="30" height="30"><path d="M8 11 h16 l2 16 a2 2 0 0 1-2 2 H8 a2 2 0 0 1-2-2 Z" fill="#a8743e" stroke="#2e1c0e" stroke-width="2"/><path d="M12 11 V8 a4 4 0 0 1 8 0 V11" fill="none" stroke="#2e1c0e" stroke-width="2.2"/><path d="M7 16 H25" stroke="#e2b247" stroke-width="2.5"/><circle cx="16" cy="16" r="2.4" fill="#ffe08a" stroke="#7a4e18"/></svg>';document.body.appendChild(invBtn);
 const invUI=document.createElement("div");invUI.id="invui";document.body.appendChild(invUI);
 let invOpen=false,invTab="w";
 function renderInv(){const tabs=[["w","Silahlar"],["t","Tabletler"],["c","Karakter"]].map(([k,n])=>`<b class="tb ${invTab===k?"on":""}" data-t="${k}">${n}</b>`).join("");let body="";
  if(invTab==="w"){const col=TIER_COL[WEAP.tier];
-  const slots=[0,1,2,3].map(i=>i===0?`<div class="sl on" style="border-color:${col}">${wIcon("staff",col)}<small>${TIER_NAMES[WEAP.tier]} Asa</small></div>`:`<div class="sl"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#fff" stroke-width="2.2"><rect x="5" y="10" width="14" height="11" rx="2" fill="rgba(255,255,255,.2)"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg><small>${["","Sv 5","Sv 15","Sv 30"][i]}</small></div>`).join("");
-  const cards=Object.keys(WNAME).map(k=>{const own=CHEST.own[k];if(k==="staff")return`<div class="wc on" style="border-color:${col}"><div class="ic" style="border-color:${col}">${wIcon(k,col)}</div><div class="inf"><div class="nm" style="color:${col}">${TIER_NAMES[WEAP.tier]} Asa <i>KUŞANILDI</i></div>
-    <div class="bar"><i style="width:${WEAP.tier===6&&WEAP.lvl>=100?100:WEAP.lvl}%;background:${col}"></i></div><div class="st">Kademe ${WEAP.tier+1}/7 · Sv ${WEAP.lvl}/100 · Hasar ${staffDamage()} · Menzil ${STAFF_ATK[WEAP.tier].range} m</div></div></div>`;
-   return`<div class="wc ${own?"":"lk"}"><div class="ic">${wIcon(k,own?"#d8c9a8":"#777")}</div><div class="inf"><div class="nm">${WNAME[k]} ${own?"<i class='soon'>YAKINDA</i>":""}</div><div class="st">${own?"Koleksiyonda. Bir sonraki güncellemede kullanılabilir olacak.":"Kilitli · Sandıklardan çıkabilir"}</div></div></div>`;}).join("");
+  const slots=[0,1,2,3].map(i=>i===0?`<div class="sl on" style="border-color:${col}">${wIcon(EQ,col)}<small>${weapName()}</small></div>`:`<div class="sl"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#fff" stroke-width="2.2"><rect x="5" y="10" width="14" height="11" rx="2" fill="rgba(255,255,255,.2)"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg><small>${["","Sv 5","Sv 15","Sv 30"][i]}</small></div>`).join("");
+  const cards=Object.keys(WNAME).map(k=>{const own=CHEST.own[k],s=WSTATE[k],c=TIER_COL[s.tier],A=k==="staff"?STAFF_ATK[s.tier]:WATK[k];
+   if(!own)return`<div class="wc lk"><div class="ic">${wIcon(k,"#777")}</div><div class="inf"><div class="nm">${WNAME[k]}</div><div class="st">Kilitli · Sandıklardan çıkabilir</div></div></div>`;
+   return`<div class="wc ${k===EQ?"on":""}" style="border-color:${k===EQ?c:"rgba(255,255,255,.12)"}"><div class="ic" style="border-color:${c}">${wIcon(k,c)}</div><div class="inf"><div class="nm" style="color:${c}">${weapName(k)} ${k===EQ?"<i>KUŞANILDI</i>":`<u class="eq" data-k="${k}">Kuşan</u>`}</div>
+    <div class="bar"><i style="width:${s.tier===6&&s.lvl>=100?100:s.lvl}%;background:${c}"></i></div><div class="st">Kademe ${s.tier+1}/7 · Sv ${s.lvl}/100 · Hasar ${weapDamage(k)} · Menzil ${A.range} m</div></div></div>`;}).join("");
   const tiers=TIER_NAMES.map((n,i)=>`<span style="background:${TIER_COL[i]};opacity:${i<=WEAP.tier?1:0.28}" title="${n}">${i+1}</span>`).join("");
-  body=`<div class="sec">Kuşanılan silahlar</div><div class="slots4">${slots}</div><div class="sec">Asa kademeleri</div><div class="tiers">${tiers}</div><div class="sec">Koleksiyon</div>${cards}
-   <button class="test">Test: Asa kademesini değiştir</button>`;}
+  body=`<div class="sec">Kuşanılan silahlar</div><div class="slots4">${slots}</div><div class="sec">${WNAME[EQ]} kademeleri</div><div class="tiers">${tiers}</div><div class="sec">Koleksiyon</div>${cards}
+   <button class="test">Test: ${WNAME[EQ]} kademesini değiştir</button><button class="test all">Test: tüm silahların kilidini aç</button>`;}
  else if(invTab==="t"){body=`<div class="sec">Kutsal tabletler (0/7)</div><div class="tabs7">${TABLETS.map((tb,i)=>`<div class="tbl"><div class="tic">${LOCK}</div><div><b>${tb.n} Tableti</b><small>${tb.u}${i<6?" kilidini açar":""}</small></div></div>`).join("")}</div>
   <p class="note">Tabletler dünyanın gizli köşelerine saklı. Her biri silahlarının bir üst kademeye geçmesinin kilidini açar.</p>`;}
- else{const rows=[["Can",fmtHP(PL.hpMax)],["Can yenilenme",PL.regen+" / sn"],["Silah hasarı",staffDamage()],["Kritik şansı","%15 (2× hasar)"],["Saldırı aralığı",Math.max(0.7,STAFF_ATK[WEAP.tier].dur+0.12).toFixed(2)+" sn"],["Menzil",STAFF_ATK[WEAP.tier].range+" m"],["Öldürülen düşman",CHEST.kills],["Keşfedilen bölge",DISC.filter(Boolean).length+" / 9"]];
+ else{const rows=[["Can",fmtHP(PL.hpMax)],["Can yenilenme",PL.regen+" / sn"],["Silah",weapName()],["Silah hasarı",weapDamage()],["Kritik şansı",EQ==="dagger"?"%25 (2× hasar)":"%15 (2× hasar)"],["Saldırı aralığı",atkCd().toFixed(2)+" sn"],["Menzil",curAtk().range+" m"],["Öldürülen düşman",CHEST.kills],["Keşfedilen bölge",DISC.filter(Boolean).length+" / 9"]];
   body=`<div class="sec">Arin</div><div class="stats">${rows.map(r=>`<div><span>${r[0]}</span><b>${r[1]}</b></div>`).join("")}</div>`;}
  invUI.innerHTML=`<div class="panel"><div class="hd"><span>Envanter</span><i class="x">✕</i></div><div class="tabsbar">${tabs}</div><div class="bd">${body}</div></div>`;
  invUI.querySelector(".x").onclick=closeInv;invUI.querySelectorAll(".tb").forEach(el=>el.onclick=()=>{invTab=el.dataset.t;renderInv();});
- const tb=invUI.querySelector(".test");if(tb)tb.onclick=()=>{WEAP.tier=(WEAP.tier+1)%7;WEAP.lvl=1;saveWeap();updWeapUI();renderInv();tierUpFX();};}
+ const tb=invUI.querySelector(".test:not(.all)");if(tb)tb.onclick=()=>{WEAP.tier=(WEAP.tier+1)%7;WEAP.lvl=1;saveWeap();updWeapUI();renderInv();tierUpFX();};
+ const ta=invUI.querySelector(".test.all");if(ta)ta.onclick=()=>{for(const k in CHEST.own)CHEST.own[k]=true;saveChest();renderInv();};
+ invUI.querySelectorAll(".eq").forEach(el=>el.onclick=()=>{equip(el.dataset.k);renderInv();});}
 function openInv(){invOpen=true;joy.on=false;joy.ix=joy.iy=0;invUI.classList.add("show");renderInv();}
 function closeInv(){invOpen=false;invUI.classList.remove("show");}
 invBtn.addEventListener("pointerdown",e=>{e.stopPropagation();e.preventDefault();openInv();});
 invUI.addEventListener("pointerdown",e=>e.stopPropagation());
+updWeapUI();
 
 const fmtHP=v=>v>=1000?(v/1000).toFixed(2)+"K":String(Math.round(v));
 
@@ -1281,7 +1382,7 @@ function drawOverlay(){oc.setTransform(dpr,0,0,dpr,0,0);oc.clearRect(0,0,W,H);if
 // ================= render =================
 const vigEl=document.getElementById("vig"),hpBar=document.querySelector("#hp i"),hpEl=document.getElementById("hp"),hpnEl=document.getElementById("hpn"),gateEl=document.getElementById("gate");
 function visibleChunks(R){const o=[];for(const c of WORLD.chunks.values())if(Math.hypot(c.cx-cam.x,c.cz-(cam.z-3))<R+CH*0.75)o.push(c);return o;}
-function render(t){computeVP();const chars=characterParts();const ens=[];for(const q of dropParts())ens.push([q[0],q[1],false]);for(const e of ENEMIES){if((e.state==='dead'&&e.dead>2.4)||Math.hypot(e.x-cam.x,e.z-(cam.z-3))>30)continue;for(const q of enemyParts(e))ens.push([q[0],q[1],e.flash>0]);}const vis=visibleChunks(26),visF=visibleChunks(40);
+function render(t){computeVP();const chars=characterParts();const ens=[];for(const q of dropParts())ens.push([q[0],q[1],false]);for(const q of arrowParts())ens.push([q[0],q[1],false]);for(const e of ENEMIES){if((e.state==='dead'&&e.dead>2.4)||Math.hypot(e.x-cam.x,e.z-(cam.z-3))>30)continue;for(const q of enemyParts(e))ens.push([q[0],q[1],e.flash>0]);}const vis=visibleChunks(26),visF=visibleChunks(40);
  if(shadowOK){CUR=DEPTH;gl.useProgram(DEPTH.p);gl.bindFramebuffer(gl.FRAMEBUFFER,smFB);gl.viewport(0,0,SMS,SMS);gl.clearColor(1,1,1,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
   gl.uniformMatrix4fv(DEPTH.u.uLVP,false,LVP);for(const c of vis)draw(c.mesh,null);for(const [m,mx] of chars)draw(m,mx);for(const [m,mx] of ens)draw(m,mx);gl.bindFramebuffer(gl.FRAMEBUFFER,null);}
  CUR=MAIN;gl.useProgram(MAIN.p);gl.viewport(0,0,glc.width,glc.height);const sky=ENV.sky;gl.clearColor(sky[0],sky[1],sky[2],1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
