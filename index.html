@@ -690,27 +690,40 @@ function enemyParts(e){const out=[],amt=Math.min(1,e.spd/ETYPE[e.t].speed),ph=e.
  const legs=(hip,thighM,shinM,footM,sep)=>{for(const side of[1,-1]){const p=ph+(side>0?0:Math.PI);const th=Math.sin(p)*0.55*amt,kn=(Math.cos(p)>0?0.12+Math.cos(p)*0.9:0.1)*amt;
    const tm=M4.chain(hip,M4.T(side*sep,0,0),M4.Rx(-th));out.push([thighM,tm]);const sm=M4.chain(tm,M4.T(0,-TH,0),M4.Rx(kn));out.push([shinM,sm]);if(footM)out.push([footM,M4.chain(sm,M4.T(0,-SH,0),M4.Rx(th-kn))]);}};
  const bob=(Math.abs(Math.cos(ph))*0.035-0.02)*amt;
+ // attack phases: 0-0.5 wind-up, 0.5-0.62 strike, 0.62-1 recover
+ const A=e.atk>0?Math.min(1,e.atk):0,ez=x=>x*x*(3-2*x);
+ const wind=A<=0?0:A<0.5?ez(A/0.5):A<0.62?1-(A-0.5)/0.12:0,strike=A<0.5?0:A<0.62?ez((A-0.5)/0.12):A<0.8?1:1-ez((A-0.8)/0.2),lunge=strike*0.22;
+ if(lunge>0)base=M4.chain(base,M4.T(0,0,lunge));
  if(e.t==="guard"){const hip=M4.chain(base,M4.T(0,HIPY+bob,0));legs(hip,PT.thigh,PT.shin,PT.foot,0.095);
-  const torso=M4.chain(hip,M4.T(0,0.16,0),M4.Ry(-Math.sin(ph)*0.1*amt),M4.Rx(0.05*amt+at*0.15));out.push([EM.g_torso,torso]);
-  const ur=M4.chain(torso,M4.T(-0.235,0.33,0),M4.Rz(-0.15),M4.Rx(-0.35-at*1.25));out.push([PT.upperArm,ur]);const lr=M4.chain(ur,M4.T(0,-UA,0),M4.Rx(-0.9+at*0.7));out.push([PT.lowerL,lr]);
-  out.push([EM.spear,M4.chain(lr,M4.T(0,-FA-0.04,0.02),M4.Rx(Math.PI/2-0.2+at*0.4))]);
-  const ul=M4.chain(torso,M4.T(0.235,0.33,0),M4.Rz(0.2),M4.Rx(-0.5));out.push([PT.upperArm,ul]);const ll=M4.chain(ul,M4.T(0,-UA,0),M4.Rx(-1.2));out.push([PT.lowerL,ll]);
-  out.push([EM.shield,M4.chain(torso,M4.T(0.3,0.14,0.17),M4.Ry(0.45),M4.Rx(at*-0.3))]);
+  const torso=M4.chain(hip,M4.T(0,0.16,0),M4.Ry(-Math.sin(ph)*0.1*amt-wind*0.35+strike*0.3),M4.Rx(0.05*amt+strike*0.22-wind*0.08));out.push([EM.g_torso,torso]);
+  // spear: upright at rest, lowered to horizontal while pulled back, then driven forward
+  const lev=Math.min(1,wind+strike),sa=lev*1.5,sz=-0.32*wind+0.72*strike,sy=0.12+0.05*lev;
+  const grip=M4.chain(torso,M4.T(-0.27,sy,0.12+sz));out.push([EM.spear,M4.chain(grip,M4.Rx(sa),M4.T(0,-0.25*lev,0))]);
+  const ur=M4.chain(torso,M4.T(-0.235,0.33,0),M4.Rz(-0.15+lev*0.1),M4.Rx(-0.35-lev*0.55-strike*0.55+wind*0.35));out.push([PT.upperArm,ur]);
+  out.push([PT.lowerL,M4.chain(ur,M4.T(0,-UA,0),M4.Rx(-0.9+strike*0.75-wind*0.2))]);
+  const ul=M4.chain(torso,M4.T(0.235,0.33,0),M4.Rz(0.2),M4.Rx(-0.5));out.push([PT.upperArm,ul]);out.push([PT.lowerL,M4.chain(ul,M4.T(0,-UA,0),M4.Rx(-1.2))]);
+  out.push([EM.shield,M4.chain(torso,M4.T(0.3,0.14,0.17+strike*0.05),M4.Ry(0.45+strike*0.3))]);
   const hm=M4.chain(torso,M4.T(0,0.71,0.01),M4.S(1.2,1.2,1.2));out.push([EM.g_head,hm]);out.push([EM.g_face,hm]);}
  else if(e.t==="clay"){const hip=M4.chain(base,M4.T(0,HIPY+bob,0));legs(hip,EM.c_leg,EM.c_leg,null,0.1);
-  const torso=M4.chain(hip,M4.T(0,0.16,0),M4.Ry(-Math.sin(ph)*0.08*amt),M4.Rx(at*0.25));out.push([EM.c_torso,torso]);
-  for(const side of[1,-1]){const p=ph+(side>0?Math.PI:0),sw=Math.sin(p)*0.4*amt+(side<0?at*1.6:0);const um=M4.chain(torso,M4.T(side*0.235,0.34,0),M4.Rz(side*0.1),M4.Rx(-sw));out.push([EM.c_upper,um]);
-   out.push([EM.c_lower,M4.chain(um,M4.T(0,-UA-0.02,0),M4.Rx(-0.25-(side<0?at*0.4:0)))]);}
+  const torso=M4.chain(hip,M4.T(0,0.16,0),M4.Ry(-Math.sin(ph)*0.08*amt-wind*0.45+strike*0.4),M4.Rx(strike*0.2));out.push([EM.c_torso,torso]);
+  for(const side of[1,-1]){const p=ph+(side>0?Math.PI:0);let sw=Math.sin(p)*0.4*amt,el=0.25;
+   if(side<0){sw=sw*(1-Math.min(1,wind+strike))-wind*0.9+strike*1.55;el=0.25+wind*1.3-strike*1.1;}
+   const um=M4.chain(torso,M4.T(side*0.235,0.34,0),M4.Rz(side*0.1),M4.Rx(-sw));out.push([EM.c_upper,um]);
+   out.push([EM.c_lower,M4.chain(um,M4.T(0,-UA-0.02,0),M4.Rx(-Math.max(0.05,el)))]);}
   out.push([EM.c_head,M4.chain(torso,M4.T(0,0.7,0.01),M4.Rx(0.15),M4.S(1.15,1.15,1.15))]);}
- else if(e.t==="salt"){const hip=M4.chain(base,M4.T(0,0.5+bob,0),M4.S(1.15,1.15,1.15));
+ else if(e.t==="salt"){const hip=M4.chain(base,M4.T(0,0.5+bob-strike*0.08,0),M4.S(1.15,1.15,1.15));
   for(const side of[1,-1]){const p=ph+(side>0?0:Math.PI);out.push([EM.s_limb,M4.chain(hip,M4.T(side*0.14,0,0),M4.Rx(-Math.sin(p)*0.5*amt))]);out.push([EM.s_limb,M4.chain(hip,M4.T(side*0.14,-0.2,0),M4.Rx(-Math.sin(p)*0.3*amt),M4.S(1,0.95,1))]);}
-  const torso=M4.chain(hip,M4.T(0,0,0),M4.Rx(0.18+at*0.35),M4.Ry(Math.sin(ph)*0.08*amt));out.push([EM.s_body,torso]);
-  for(const side of[1,-1]){const p=ph+(side>0?Math.PI:0),sw=Math.sin(p)*0.35*amt+at*1.5;const um=M4.chain(torso,M4.T(side*0.34,0.6,0.02),M4.Rz(side*0.35),M4.Rx(-sw));out.push([EM.s_limb,um]);
-   const lm=M4.chain(um,M4.T(0,-0.3,0),M4.Rx(-0.3));out.push([EM.s_limb,lm]);out.push([EM.s_hand,M4.chain(lm,M4.T(0,-0.32,0))]);}
+  const torso=M4.chain(hip,M4.Rx(0.18-wind*0.3+strike*0.55),M4.Ry(Math.sin(ph)*0.08*amt));out.push([EM.s_body,torso]);
+  // both fists raised overhead, then slammed to the ground
+  for(const side of[1,-1]){const p=ph+(side>0?Math.PI:0),sw=Math.sin(p)*0.35*amt*(1-Math.min(1,wind+strike))+wind*2.7+strike*(2.7-2.2);
+   const um=M4.chain(torso,M4.T(side*0.34,0.6,0.02),M4.Rz(side*(0.35-wind*0.25)),M4.Rx(-sw));out.push([EM.s_limb,um]);
+   const lm=M4.chain(um,M4.T(0,-0.3,0),M4.Rx(-0.3-wind*0.5));out.push([EM.s_limb,lm]);out.push([EM.s_hand,M4.chain(lm,M4.T(0,-0.32,0))]);}
   const hm=M4.chain(torso,M4.T(0,0.92,0.04));out.push([EM.s_head,hm]);out.push([EM.s_face,hm]);}
- else{const fl=M4.chain(base,M4.T(0,0.02+Math.sin(performance.now()/400+e.seed)*0.03,0),M4.Rx(0.08*amt));out.push([EM.p_body,fl]);
-  for(const side of[1,-1]){const sw=side<0?at*1.9:Math.sin(ph)*0.2*amt;const am=M4.chain(fl,M4.T(side*0.24,0.95,0),M4.Rz(side*0.18),M4.Rx(-0.3-sw));out.push([EM.p_arm,am]);
-   if(side<0)out.push([EM.sickle,M4.chain(am,M4.T(0,-0.38,0.04),M4.Rx(Math.PI/2-0.3+at*0.5),M4.Ry(Math.PI/2))]);}
+ else{const fl=M4.chain(base,M4.T(0,0.02+Math.sin(performance.now()/400+e.seed)*0.03,0),M4.Rx(0.08*amt+strike*0.18-wind*0.08),M4.Ry(-wind*0.4+strike*0.5));out.push([EM.p_body,fl]);
+  for(const side of[1,-1]){let rx=-0.3-(side>0?Math.sin(ph)*0.2*amt:0),rz=side*0.18;
+   if(side<0){rx=-0.3-wind*2.5+strike*(2.5+0.9);rz=side*(0.18+wind*0.5-strike*0.35);}
+   const am=M4.chain(fl,M4.T(side*0.24,0.95,0),M4.Rz(rz),M4.Rx(rx));out.push([EM.p_arm,am]);
+   if(side<0)out.push([EM.sickle,M4.chain(am,M4.T(0,-0.38,0.04),M4.Rx(Math.PI/2-0.3+wind*0.3+strike*0.4),M4.Ry(Math.PI/2))]);}
   const hm=M4.chain(fl,M4.T(0,1.22,0.0),M4.S(1.05,1.05,1.05));out.push([EM.p_head,hm]);out.push([EM.p_mask,hm]);}
  return out;}
 // ---- enemy state & combat ----
@@ -759,7 +772,7 @@ function updCombat(dt){
   else if(e.state==="return"){tx=e.hx;tz=e.hz;move=true;if(home<0.4){e.state="idle";}e.hp=Math.min(e.hpMax,e.hp+e.hpMax*0.3*dt);}
   else if(e.state==="chase"){if(home>15||PL.dead>0){e.state="return";}else if(dP<=T.range+0.1){e.state="attack";e.cd=Math.min(e.cd,0.35);}else{tx=P.x;tz=P.z;move=true;}}
   else if(e.state==="attack"){e.tYaw=Math.atan2(P.x-e.x,P.z-e.z);if(e.atk<=0){e.cd-=dt;if(dP>T.range+0.5)e.state="chase";else if(e.cd<=0){e.atk=0.0001;e.hitDone=false;}}}
-  if(e.atk>0){e.atk+=dt/0.7;if(!e.hitDone&&e.atk>=0.55){e.hitDone=true;if(Math.hypot(P.x-e.x,P.z-e.z)<T.range+0.55)damagePlayer(Math.round(e.dmg*(0.85+Math.random()*0.3)));}if(e.atk>=1){e.atk=0;e.cd=T.cd;}}
+  if(e.atk>0){e.atk+=dt/0.85;if(!e.hitDone&&e.atk>=0.58){e.hitDone=true;fxEnemyStrike(e);if(Math.hypot(P.x-e.x,P.z-e.z)<T.range+0.55)damagePlayer(Math.round(e.dmg*(0.85+Math.random()*0.3)));}if(e.atk>=1){e.atk=0;e.cd=T.cd;}}
   if(move){const dx=tx-e.x,dz=tz-e.z,l=Math.hypot(dx,dz);if(l>0.05){e.tYaw=Math.atan2(dx,dz);e.spd+=(sp-e.spd)*Math.min(1,dt*6);}}else e.spd+=(0-e.spd)*Math.min(1,dt*8);
   e.yaw+=angD(e.tYaw,e.yaw)*Math.min(1,dt*8);
   if(e.spd>0.05){const vx=Math.sin(e.yaw)*e.spd*dt,vz=Math.cos(e.yaw)*e.spd*dt;if(eFree(e,e.x+vx,e.z))e.x+=vx;if(eFree(e,e.x,e.z+vz))e.z+=vz;e.phase+=dt*e.spd/0.7*Math.PI;}
@@ -792,6 +805,11 @@ function fxDeath(e){const c=FXC[e.t];FX.push({k:"flash",x:e.x,y:0.9,z:e.z,t:0,li
  FX.push({k:"ring",x:e.x,y:0.04,z:e.z,t:0,life:0.55,r0:0.3,r1:2.3,col:"255,226,170"});
  fxChunks(e.x,0.9,e.z,16,c.chunk,4,1.3);fxSparks(e.x,0.9,e.z,14,c.spark,6);fxSmoke(e.x,0.5,e.z,c.smoke?10:5,c.smoke?"30,28,36":"200,190,170");SHAKE=Math.max(SHAKE,0.16);}
 function fxPlayerHit(){VIGN=0.65;SHAKE=Math.max(SHAKE,0.12);fxSparks(P.x,1.0,P.z,8,"255,96,70",4);}
+function fxEnemyStrike(e){const fx=Math.sin(e.yaw),fz=Math.cos(e.yaw);
+ if(e.t==="guard"){FX.push({k:"thrust",x:e.x+fx*0.4,y:1.0,z:e.z+fz*0.4,yaw:e.yaw,t:0,life:0.18});}
+ else if(e.t==="priest"){FX.push({k:"slash",x:e.x,y:1.05,z:e.z,yaw:e.yaw,t:0,life:0.22,dark:true});}
+ else if(e.t==="salt"){const x=e.x+fx*0.75,z=e.z+fz*0.75;FX.push({k:"ring",x,y:0.04,z,t:0,life:0.45,r0:0.2,r1:1.5,col:"230,240,250"});fxChunks(x,0.2,z,7,FXC.salt.chunk,2.4);fxSmoke(x,0.2,z,4,"235,235,230");SHAKE=Math.max(SHAKE,0.1);}
+ else{FX.push({k:"thrust",x:e.x+fx*0.35,y:0.95,z:e.z+fz*0.35,yaw:e.yaw,t:0,life:0.14,short:true});}}
 function fxPunch(){FX.push({k:"slash",x:P.x,y:1.0,z:P.z,yaw:P.yaw,t:0,life:0.2});}
 function updFX(dt){for(const p of FX){p.t+=dt;if(p.k==="spark"){p.vy-=9*dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.z+=p.vz*dt;}
   else if(p.k==="chunk"){p.vy-=11*dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.z+=p.vz*dt;p.rot+=p.vr*dt;if(p.y<0.03){p.y=0.03;p.vy*=-0.32;p.vx*=0.55;p.vz*=0.55;p.vr*=0.5;}}
@@ -810,9 +828,12 @@ function drawFX(){
   else if(p.k==="flash"){const[s,ppm]=ppmAt(p.x,p.y,p.z);if(s[2]<0)continue;const R=ppm*(p.crit?0.95:0.65)*(0.6+q*0.6);oc.globalAlpha=1-q;
    const g=oc.createRadialGradient(s[0],s[1],0,s[0],s[1],R);g.addColorStop(0,"rgba(255,255,240,1)");g.addColorStop(0.35,p.crit?"rgba(255,210,90,.85)":"rgba(255,230,170,.7)");g.addColorStop(1,"rgba(255,160,60,0)");oc.fillStyle=g;oc.beginPath();oc.arc(s[0],s[1],R,0,7);oc.fill();
    oc.strokeStyle="rgba(255,250,220,1)";oc.lineWidth=2.2;const n=p.crit?8:6;for(let k=0;k<n;k++){const a=k/n*6.283+0.3,l=R*(k%2?0.9:1.4);oc.beginPath();oc.moveTo(s[0]+Math.cos(a)*R*0.25,s[1]+Math.sin(a)*R*0.25);oc.lineTo(s[0]+Math.cos(a)*l,s[1]+Math.sin(a)*l);oc.stroke();}}
+  else if(p.k==="thrust"){const a=toScreen([p.x,p.y,p.z]),L=p.short?0.6:1.3,b=toScreen([p.x+Math.sin(p.yaw)*L,p.y,p.z+Math.cos(p.yaw)*L]);if(a[2]<0)continue;const q2=Math.min(1,q*2.5);
+   const mx=a[0]+(b[0]-a[0])*q2,my=a[1]+(b[1]-a[1])*q2;oc.globalAlpha=1-q;const g=oc.createLinearGradient(a[0],a[1],mx,my);g.addColorStop(0,"rgba(255,240,200,0)");g.addColorStop(1,"rgba(255,250,230,1)");
+   oc.strokeStyle=g;oc.lineCap="round";oc.lineWidth=p.short?5:4;oc.beginPath();oc.moveTo(a[0],a[1]);oc.lineTo(mx,my);oc.stroke();oc.lineWidth=1.5;oc.strokeStyle="rgba(255,255,255,1)";oc.beginPath();oc.moveTo((a[0]+mx)/2,(a[1]+my)/2);oc.lineTo(mx,my);oc.stroke();}
   else if(p.k==="slash"){const[c,ppm]=ppmAt(p.x,p.y,p.z);if(c[2]<0)continue;const f=toScreen([p.x+Math.sin(p.yaw),p.y,p.z+Math.cos(p.yaw)]);const ang=Math.atan2(f[1]-c[1],f[0]-c[0]);
    const R=ppm*1.05,sw=2.2,a0=ang-sw/2+q*0.3,a1=a0+sw*Math.min(1,q*2.4);oc.globalAlpha=(1-q*q);
-   const g=oc.createLinearGradient(c[0]+Math.cos(a0)*R,c[1]+Math.sin(a0)*R,c[0]+Math.cos(a1)*R,c[1]+Math.sin(a1)*R);g.addColorStop(0,"rgba(190,220,255,0)");g.addColorStop(1,"rgba(255,255,255,.95)");
+   const g=oc.createLinearGradient(c[0]+Math.cos(a0)*R,c[1]+Math.sin(a0)*R,c[0]+Math.cos(a1)*R,c[1]+Math.sin(a1)*R);g.addColorStop(0,p.dark?"rgba(160,60,200,0)":"rgba(190,220,255,0)");g.addColorStop(1,p.dark?"rgba(230,190,255,.95)":"rgba(255,255,255,.95)");
    oc.fillStyle=g;oc.beginPath();oc.arc(c[0],c[1],R,a0,a1);oc.arc(c[0]+Math.cos(ang)*R*0.22,c[1]+Math.sin(ang)*R*0.22,R*0.7,a1,a0,true);oc.closePath();oc.fill();}}
  oc.globalCompositeOperation="source-over";oc.globalAlpha=1;}
 const fmtHP=v=>v>=1000?(v/1000).toFixed(2)+"K":String(Math.round(v));
