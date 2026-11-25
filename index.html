@@ -246,7 +246,7 @@ void main(){vec4 w=uM*vec4(aP,1.0);vW=w.xyz;vN=(uM*vec4(aN,0.0)).xyz;vC=aC.rgb;v
 const FS=`#extension GL_OES_standard_derivatives : enable
 `+HP+`varying vec3 vW;varying vec3 vN;varying vec3 vC;varying float vMat;varying vec4 vL;
 uniform vec3 uL;uniform vec3 uSky;uniform vec3 uGnd;uniform vec3 uSun;uniform vec3 uFog;uniform vec3 uEye;uniform vec3 uTgt;uniform vec3 uPl;uniform vec3 uTint;
-uniform vec3 uL2p;uniform vec3 uL2c;uniform float uAmb;uniform float uTorch;uniform float uTime;uniform float uA;uniform float uShOn;uniform float uSMs;uniform sampler2D uSM;
+uniform vec3 uL2p;uniform vec3 uL2c;uniform float uStudio;uniform vec3 uRimD;uniform vec3 uRimC;uniform float uAmb;uniform float uTorch;uniform float uTime;uniform float uA;uniform float uShOn;uniform float uSMs;uniform sampler2D uSM;
 uniform sampler2D uGD;uniform vec2 uMS;uniform sampler2D uRT;uniform sampler2D uCov;
 vec4 rp(float r,float row){return texture2D(uRT,vec2((r+0.5)/9.0,(row+0.5)/8.0));}
 float regAt(vec2 c){return c.y==1.0?3.0+(2.0-c.x):c.y*3.0+c.x;}
@@ -330,9 +330,11 @@ void main(){vec3 n=normalize(vN);vec3 col=vC*uTint;float m=vMat;
  vec3 amb=mix(uGnd,uSky,n.y*0.5+0.5)*uAmb;
  vec3 li=amb+uSun*nl*sh;
  if(m>4.5){float tn=smoothstep(0.12,0.24,nl*sh);li=amb*1.0+uSun*(0.3+0.5*tn);}
+ if(uStudio>0.5){float wl=clamp((dot(n,uL)+0.3)/1.3,0.0,1.0);li=amb+uSun*(0.12+0.95*wl*wl*(3.0-2.0*wl))*mix(0.45,1.0,sh);li+=vec3(0.32,0.40,0.56)*max(dot(n,normalize(vec3(-uL.x,0.25,-uL.z))),0.0)*0.5;}
  float pd=length(vW.xz-uPl.xz);li+=vec3(1.0,0.75,0.45)*uTorch*max(0.0,1.0-pd/7.5);li+=uL2c*pow(max(0.0,1.0-length(vW-uL2p)/2.8),1.5);
  vec3 c=col*li;
  vec3 v=normalize(uEye-vW);
+ if(uStudio>0.5){float fr=pow(1.0-max(dot(n,v),0.0),2.2);c+=uRimC*fr*clamp(dot(n,uRimD)*0.7+0.45,0.0,1.0);c+=uSun*pow(max(dot(n,normalize(uL+v)),0.0),36.0)*0.22*sh;}
  if(m>3.5&&m<4.5){vec3 h=normalize(uL+v);float fr=0.04+0.5*pow(1.0-max(dot(n,v),0.0),4.0);c=mix(c,uSky*0.85,fr);c+=uSun*pow(max(dot(n,h),0.0),120.0)*0.9*sh;c=mix(c,vec3(0.92,0.94,0.9)*(uAmb+uSun*0.6),foam*0.45);}
  if(spark>0.5){vec3 h=normalize(uL+v);c+=vec3(1.0)*pow(max(dot(normalize(vec3(hash(floor(vW.xz*38.0))-0.5,1.0,hash(floor(vW.xz*38.0)+3.1)-0.5)),h),0.0),40.0)*1.5*sh;}
  c+=col*pow(1.0-max(dot(n,v),0.0),3.0)*(m>4.5?0.25:0.08);
@@ -346,7 +348,7 @@ function program(vs,fs,unis){const p=gl.createProgram();gl.attachShader(p,sh(gl.
  gl.bindAttribLocation(p,0,"aP");gl.bindAttribLocation(p,1,"aN");gl.bindAttribLocation(p,2,"aC");gl.linkProgram(p);if(!gl.getProgramParameter(p,gl.LINK_STATUS))throw new Error(gl.getProgramInfoLog(p));
  const u={};for(const n of unis)u[n]=gl.getUniformLocation(p,n);return{p,u};}
 gl.getExtension("OES_standard_derivatives");
-const MAIN=program(VS,FS,["uVP","uM","uLVP","uL","uSky","uGnd","uSun","uFog","uEye","uTgt","uPl","uTint","uAmb","uTorch","uTime","uA","uShOn","uSMs","uSM","uGD","uMS","uRT","uCov","uL2p","uL2c"]);
+const MAIN=program(VS,FS,["uVP","uM","uLVP","uL","uSky","uGnd","uSun","uFog","uEye","uTgt","uPl","uTint","uAmb","uTorch","uTime","uA","uShOn","uSMs","uSM","uGD","uMS","uRT","uCov","uL2p","uL2c","uStudio","uRimD","uRimC"]);
 const DEPTH=program(DVS,DFS,["uLVP","uM"]);
 const OVS=`attribute vec3 aP;attribute vec3 aN;uniform mat4 uVP;uniform mat4 uM;uniform vec3 uEye;uniform float uW;
 void main(){vec4 w=uM*vec4(aP,1.0);vec3 n=normalize((uM*vec4(aN,0.0)).xyz);vec3 p=w.xyz+n*uW;p+=normalize(p-uEye)*uW*2.2;gl_Position=uVP*vec4(p,1.0);}`;
@@ -1811,31 +1813,47 @@ renderInv=function(){if(invTab==="c")invTab="w";const tabs=[["w","Silahlar"],["t
  vw.addEventListener("pointerdown",e=>{if(HERO.info&&!e.target.closest(".stpop")){HERO.info=false;renderInv();return;}if(e.target.closest(".stpop"))return;HERO.drag={x:e.clientX,id:e.pointerId};vw.setPointerCapture(e.pointerId);});
  vw.addEventListener("pointermove",e=>{if(!HERO.drag||e.pointerId!==HERO.drag.id)return;HERO.a-=(e.clientX-HERO.drag.x)*0.012;HERO.drag.x=e.clientX;});
  const end=()=>{HERO.drag=null;};vw.addEventListener("pointerup",end);vw.addEventListener("pointercancel",end);};
-openInv=function(){invOpen=true;joy.on=false;joy.ix=joy.iy=0;P.atk=0;HERO.info=false;document.body.classList.add("inv");invUI.classList.add("show");renderInv();};
+openInv=function(){invOpen=true;HERO.a=0;joy.on=false;joy.ix=joy.iy=0;P.atk=0;HERO.info=false;document.body.classList.add("inv");invUI.classList.add("show");renderInv();};
 closeInv=function(){invOpen=false;HERO.drag=null;document.body.classList.remove("inv");invUI.classList.remove("show");};
 // the hero model is drawn by the game renderer into the transparent window of the panel
-function renderPreview(t){gl.disable(gl.SCISSOR_TEST);gl.viewport(0,0,glc.width,glc.height);gl.clearColor(0.075,0.05,0.03,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+const PED=(()=>{const mb=new MB();mb.smooth=true;const st=hex("#5e574e"),sd=hex("#3f3a34"),gd=hex("#b08a48");
+ mb.cyl(0,-0.2,0,0.66,0.63,0.1,40,sd,true,0);mb.cyl(0,-0.1,0,0.61,0.58,0.08,40,st,true,0);mb.cyl(0,-0.02,0,0.58,0.58,0.02,40,hex("#4a443d"),true,0);
+ for(let k=0;k<16;k++){const a=k/16*6.283;mb.cyl(Math.cos(a)*0.645,-0.2,Math.sin(a)*0.645,0.03,0.03,0.1,6,gd,false,0);}return upload(mb);})();
+const PEDR=(()=>{const mb=new MB();mb.smooth=true;for(let k=0;k<48;k++){const a=k/48*6.283,a1=(k+1)/48*6.283,r0=0.48,r1=0.53,y=0.002;
+ mb.quad([Math.cos(a)*r0,y,Math.sin(a)*r0],[Math.cos(a)*r1,y,Math.sin(a)*r1],[Math.cos(a1)*r1,y,Math.sin(a1)*r1],[Math.cos(a1)*r0,y,Math.sin(a1)*r0],[1,1,1],[0,1,0],1);}return upload(mb);})();
+function renderPreview(t){gl.disable(gl.SCISSOR_TEST);gl.viewport(0,0,glc.width,glc.height);gl.clearColor(0.06,0.04,0.025,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
  oc.setTransform(dpr,0,0,dpr,0,0);oc.clearRect(0,0,W,H);const el=invUI.querySelector(".view");if(!el)return;const r=el.getBoundingClientRect();if(r.width<8||r.height<8)return;
- if(!HERO.drag)HERO.a+=dtLast*0.55;const gy=MAP?groundY(P.x,P.z):0,a=P.yaw+HERO.a,d=3.3,tg=[P.x,gy+0.78,P.z],ey=[P.x+Math.sin(a)*d,gy+1.55,P.z+Math.cos(a)*d];
- const VPp=M4.mul(M4.persp(0.55,r.width/r.height,0.3,40),M4.look(ey,tg,[0,1,0]));
+ if(!HERO.drag)HERO.a+=dtLast*0.5;const gy=MAP?groundY(P.x,P.z):0,a=P.yaw+HERO.a,d=4.4,tg=[P.x,gy+0.64,P.z],ey=[P.x+Math.sin(a)*d,gy+1.3,P.z+Math.cos(a)*d];
+ const fw=[Math.sin(a),0,Math.cos(a)],rt=[Math.cos(a),0,-Math.sin(a)],nrm=v=>{const l=Math.hypot(v[0],v[1],v[2]);return[v[0]/l,v[1]/l,v[2]/l];};
+ const key=nrm([fw[0]*0.75-rt[0]*0.6,1.0,fw[2]*0.75-rt[2]*0.6]),rim=nrm([-fw[0]*0.8+rt[0]*0.45,0.35,-fw[2]*0.8+rt[2]*0.45]);
+ const VPp=M4.mul(M4.persp(0.5,r.width/r.height,0.3,40),M4.look(ey,tg,[0,1,0]));
  const vx=Math.round(r.left*dpr),vy=Math.round((H-r.bottom)*dpr),vw=Math.round(r.width*dpr),vh=Math.round(r.height*dpr);
- // glow ring under the feet
- const f=[P.x,gy,P.z],cx=VPp[0]*f[0]+VPp[4]*f[1]+VPp[8]*f[2]+VPp[12],cy=VPp[1]*f[0]+VPp[5]*f[1]+VPp[9]*f[2]+VPp[13],cw=VPp[3]*f[0]+VPp[7]*f[1]+VPp[11]*f[2]+VPp[15];
- const sx=r.left+(cx/cw*0.5+0.5)*r.width,sy=r.top+(1-(cy/cw*0.5+0.5))*r.height,R=r.height*0.32;
- oc.save();oc.translate(sx,sy);oc.scale(1,0.3);const g=oc.createRadialGradient(0,0,0,0,0,R);const tc=WEAP.tier>=4?ARROW_RGB[WEAP.tier]:"255,190,100";
- g.addColorStop(0,`rgba(${tc},.55)`);g.addColorStop(0.55,`rgba(${tc},.18)`);g.addColorStop(1,`rgba(${tc},0)`);oc.fillStyle=g;oc.beginPath();oc.arc(0,0,R,0,7);oc.fill();
- oc.strokeStyle=`rgba(${tc},.6)`;oc.lineWidth=2;oc.beginPath();oc.arc(0,0,R*0.62,0,7);oc.stroke();oc.restore();
- const chars=characterParts();
- gl.enable(gl.SCISSOR_TEST);gl.scissor(vx,vy,vw,vh);gl.viewport(vx,vy,vw,vh);
- CUR=MAIN;gl.useProgram(MAIN.p);const u=MAIN.u,bg=[0.075,0.05,0.03];TINT=[1,1,1];
- gl.uniformMatrix4fv(u.uVP,false,VPp);gl.uniformMatrix4fv(u.uLVP,false,LVP);gl.uniform3fv(u.uL,[0.45,0.8,0.55]);
- gl.uniform3fv(u.uSky,ENV.skyL);gl.uniform3fv(u.uGnd,ENV.gnd);gl.uniform3fv(u.uSun,ENV.sun);gl.uniform1f(u.uAmb,ENV.amb);gl.uniform3fv(u.uFog,bg);gl.uniform3fv(u.uEye,ey);gl.uniform3fv(u.uTgt,tg);
- gl.uniform3f(u.uPl,P.x,0,P.z);gl.uniform1f(u.uTorch,0);gl.uniform1f(u.uTime,t/1000);gl.uniform1f(u.uShOn,0);gl.uniform1f(u.uSMs,SMS);
+ const tc=WEAP.tier>=4?ARROW_RGB[WEAP.tier]:"255,196,120",tcv=tc.split(",").map(v=>v/255);
+ const chars=characterParts(),pedM=M4.T(P.x,gy,P.z);
+ // shadow from the key light onto the pedestal
+ const useSh=shadowOK&&SETS.q>0;let LVPp=LVP;
+ if(useSh){const c=[P.x,gy+0.6,P.z];LVPp=M4.mul(M4.ortho(-1.5,1.5,-1.5,1.5,0.5,12),M4.look([c[0]+key[0]*5,c[1]+key[1]*5,c[2]+key[2]*5],c,[0,1,0]));
+  CUR=DEPTH;gl.useProgram(DEPTH.p);gl.bindFramebuffer(gl.FRAMEBUFFER,smFB);gl.viewport(0,0,SMS,SMS);gl.clearColor(1,1,1,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+  gl.uniformMatrix4fv(DEPTH.u.uLVP,false,LVPp);for(const [m,mx] of chars)draw(m,mx);draw(PED,pedM);gl.bindFramebuffer(gl.FRAMEBUFFER,null);}
+ gl.enable(gl.SCISSOR_TEST);gl.scissor(vx,vy,vw,vh);gl.viewport(vx,vy,vw,vh);gl.clearColor(0.075,0.05,0.032,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+ CUR=MAIN;gl.useProgram(MAIN.p);const u=MAIN.u,bg=[0.075,0.05,0.032];TINT=[1,1,1];
+ gl.uniformMatrix4fv(u.uVP,false,VPp);gl.uniformMatrix4fv(u.uLVP,false,LVPp);gl.uniform3fv(u.uL,key);
+ gl.uniform3fv(u.uSky,[0.5,0.55,0.66]);gl.uniform3fv(u.uGnd,[0.42,0.3,0.2]);gl.uniform3fv(u.uSun,[1.08,0.98,0.86]);gl.uniform1f(u.uAmb,0.5);gl.uniform3fv(u.uFog,bg);gl.uniform3fv(u.uEye,ey);gl.uniform3fv(u.uTgt,tg);
+ gl.uniform3f(u.uPl,P.x,0,P.z);gl.uniform1f(u.uTorch,0);gl.uniform1f(u.uTime,t/1000);gl.uniform1f(u.uShOn,useSh?1:0);gl.uniform1f(u.uSMs,SMS);
+ gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,smTex);gl.uniform1i(u.uSM,0);
+ gl.uniform1f(u.uStudio,1);gl.uniform3fv(u.uRimD,rim);gl.uniform3fv(u.uRimC,[0.8+tcv[0]*0.6,0.65+tcv[1]*0.6,0.5+tcv[2]*0.6]);
  {const bl=bowLight();gl.uniform3fv(u.uL2p,bl[0]);gl.uniform3fv(u.uL2c,bl[1]);}
- gl.disable(gl.BLEND);gl.depthMask(true);for(const [m,mx] of chars)draw(m,mx,[1,1,1]);
- CUR=OUTP;gl.useProgram(OUTP.p);gl.uniformMatrix4fv(OUTP.u.uVP,false,VPp);gl.uniform3fv(OUTP.u.uEye,ey);gl.uniform1f(OUTP.u.uW,0.012);gl.uniform3fv(OUTP.u.uCol,[0.16,0.1,0.06]);
+ gl.disable(gl.BLEND);gl.depthMask(true);draw(PED,pedM);for(const [m,mx] of chars)draw(m,mx,[1,1,1]);
+ gl.uniform1f(u.uShOn,0);draw(PEDR,M4.T(P.x,gy+0.002,P.z),[tcv[0]*1.2,tcv[1]*1.2,tcv[2]*1.2]);
+ CUR=OUTP;gl.useProgram(OUTP.p);gl.uniformMatrix4fv(OUTP.u.uVP,false,VPp);gl.uniform3fv(OUTP.u.uEye,ey);gl.uniform1f(OUTP.u.uW,0.009);gl.uniform3fv(OUTP.u.uCol,[0.12,0.07,0.04]);
  for(const [m,mx] of chars)if(m&&m.ol)draw(m,mx);
- CUR=MAIN;gl.useProgram(MAIN.p);gl.disable(gl.SCISSOR_TEST);gl.viewport(0,0,glc.width,glc.height);}
+ CUR=MAIN;gl.useProgram(MAIN.p);gl.uniform1f(u.uStudio,0);gl.disable(gl.SCISSOR_TEST);gl.viewport(0,0,glc.width,glc.height);
+ // soft spotlight haze and glow around the pedestal
+ const pr=(p)=>{const x=VPp[0]*p[0]+VPp[4]*p[1]+VPp[8]*p[2]+VPp[12],y=VPp[1]*p[0]+VPp[5]*p[1]+VPp[9]*p[2]+VPp[13],w=VPp[3]*p[0]+VPp[7]*p[1]+VPp[11]*p[2]+VPp[15];return[r.left+(x/w*0.5+0.5)*r.width,r.top+(1-(y/w*0.5+0.5))*r.height];};
+ const fp=pr([P.x,gy,P.z]),R=r.height*0.42;oc.save();oc.beginPath();oc.rect(r.left,r.top,r.width,r.height);oc.clip();oc.globalCompositeOperation="lighter";
+ oc.translate(fp[0],fp[1]);oc.scale(1,0.3);let g=oc.createRadialGradient(0,0,R*0.45,0,0,R);g.addColorStop(0,`rgba(${tc},.13)`);g.addColorStop(1,`rgba(${tc},0)`);oc.fillStyle=g;oc.beginPath();oc.arc(0,0,R,0,7);oc.fill();oc.restore();
+ oc.save();oc.beginPath();oc.rect(r.left,r.top,r.width,r.height);oc.clip();oc.globalCompositeOperation="lighter";g=oc.createRadialGradient(r.left+r.width/2,r.top-r.height*0.1,0,r.left+r.width/2,r.top-r.height*0.1,r.height*1.1);
+ g.addColorStop(0,"rgba(255,230,190,.10)");g.addColorStop(1,"rgba(255,230,190,0)");oc.fillStyle=g;oc.fillRect(r.left,r.top,r.width,r.height);oc.restore();}
 // ---- ☰ menu: settings and profile ----
 const menuBtn=document.createElement("div");menuBtn.id="menubtn";menuBtn.innerHTML='<svg viewBox="0 0 24 24" width="22" height="22" stroke="#fff" stroke-width="2.6" stroke-linecap="round"><path d="M4 6.5H20M4 12H20M4 17.5H20"/></svg>';document.body.appendChild(menuBtn);
 const menuDD=document.createElement("div");menuDD.id="menudd";menuDD.innerHTML='<div data-m="set">⚙️ Ayarlar</div><div data-m="prof">👤 Profil</div>';document.body.appendChild(menuDD);
