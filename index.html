@@ -1775,9 +1775,9 @@ function drawOverlay(){oc.setTransform(dpr,0,0,dpr,0,0);oc.clearRect(0,0,W,H);if
 // ================= render =================
 const vigEl=document.getElementById("vig"),hpBar=document.querySelector("#hp i"),hpEl=document.getElementById("hp"),hpnEl=document.getElementById("hpn"),gateEl=document.getElementById("gate");
 function visibleChunks(R){const o=[];for(const c of WORLD.chunks.values())if(Math.hypot(c.cx-cam.x,c.cz-(cam.z-3))<R+CH*0.75)o.push(c);return o;}
-function render(t){placeMenu();if(invOpen){renderPreview(t);return;}computeVP();const chars=characterParts();const ens=[];for(const q of dropParts())ens.push([q[0],q[1],false]);for(const q of arrowParts())ens.push([q[0],q[1],false]);for(const e of ENEMIES){if((e.state==='dead'&&e.dead>2.4)||Math.hypot(e.x-cam.x,e.z-(cam.z-3))>30)continue;for(const q of enemyParts(e))ens.push([q[0],q[1],e.flash>0]);}const vis=visibleChunks(26),visF=visibleChunks(40);
+function render(t){placeMenu();if(invOpen){renderPreview(t);return;}computeVP();const chars=characterParts();GATEP=gateParts();const ens=[];for(const q of dropParts())ens.push([q[0],q[1],false]);for(const q of arrowParts())ens.push([q[0],q[1],false]);for(const e of ENEMIES){if((e.state==='dead'&&e.dead>2.4)||Math.hypot(e.x-cam.x,e.z-(cam.z-3))>30)continue;for(const q of enemyParts(e))ens.push([q[0],q[1],e.flash>0]);}const vis=visibleChunks(26),visF=visibleChunks(40);
  if(shadowOK&&SETS.q>0){CUR=DEPTH;gl.useProgram(DEPTH.p);gl.bindFramebuffer(gl.FRAMEBUFFER,smFB);gl.viewport(0,0,SMS,SMS);gl.clearColor(1,1,1,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
-  gl.uniformMatrix4fv(DEPTH.u.uLVP,false,LVP);for(const c of vis)draw(c.mesh,null);for(const [m,mx] of chars)draw(m,mx);for(const [m,mx] of ens)draw(m,mx);gl.bindFramebuffer(gl.FRAMEBUFFER,null);}
+  gl.uniformMatrix4fv(DEPTH.u.uLVP,false,LVP);for(const c of vis)draw(c.mesh,null);for(const [m,mx] of chars)draw(m,mx);for(const [m,mx] of ens)draw(m,mx);for(const g of GATEP)draw(g[0],g[1]);gl.bindFramebuffer(gl.FRAMEBUFFER,null);}
  CUR=MAIN;gl.useProgram(MAIN.p);gl.viewport(0,0,glc.width,glc.height);const sky=ENV.sky;gl.clearColor(sky[0],sky[1],sky[2],1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
  const u=MAIN.u;TINT=ENV.tint;
  gl.uniformMatrix4fv(u.uVP,false,VP);gl.uniformMatrix4fv(u.uLVP,false,LVP);gl.uniform3fv(u.uL,ENV.light);
@@ -1790,7 +1790,7 @@ function render(t){placeMenu();if(invOpen){renderPreview(t);return;}computeVP();
  gl.uniform2f(u.uMS,MAP.W,MAP.H);{const bl=bowLight();gl.uniform3fv(u.uL2p,bl[0]);gl.uniform3fv(u.uL2c,bl[1]);}
  gl.disable(gl.BLEND);gl.depthMask(true);
  for(const c of vis)draw(c.mesh,null);
- TINT=[1,1,1];const pf=P.flash>0?[2.2,1.3,1.2]:[1,1,1];for(const [m,mx] of chars)draw(m,mx,pf);for(const [m,mx,fl] of ens)draw(m,mx,fl?[2.4,2.4,2.4]:[1,1,1]);
+ TINT=[1,1,1];const pf=P.flash>0?[2.2,1.3,1.2]:[1,1,1];for(const [m,mx] of chars)draw(m,mx,pf);for(const [m,mx,fl] of ens)draw(m,mx,fl?[2.4,2.4,2.4]:[1,1,1]);for(const g of GATEP)draw(g[0],g[1],g[2]);
  CUR=OUTP;gl.useProgram(OUTP.p);gl.uniformMatrix4fv(OUTP.u.uVP,false,VP);gl.uniform3fv(OUTP.u.uEye,eye);gl.uniform1f(OUTP.u.uW,0.016);gl.uniform3fv(OUTP.u.uCol,[0.16,0.1,0.06]);
  for(const [m,mx] of chars)if(m&&m.ol)draw(m,mx);for(const [m,mx] of ens)if(m&&m.ol)draw(m,mx);
  CUR=MAIN;gl.useProgram(MAIN.p);
@@ -2293,7 +2293,7 @@ function progTick(dt){const r=regionOf(P.x,P.z);
 let lastLv=0;function checkLevelGate(){if(LV.l!==lastLv){lastLv=LV.l;checkProgress();saveProg();}}
 function gateNeeds(r){const n=[];if(r+1>=ACTIVE_REGIONS)return["Yeni bölüm yakında"];const qs=QDEF(r);const left=qs.filter(q=>qProg(r,q)<q.n).length;
  if(left)n.push(left+" görev");if(!tabletDone(r))n.push(TABLETS[TAB_OF[r]].n+" Tableti");if(LV.l<LVREQ[r])n.push("Sv "+LVREQ[r]);if(!PROG.guard[r])n.push("Muhafız");return n;}
-function drawGates(){const tt=performance.now()/1000;for(const p of MAP.passes){const st=gateState(p.a);if(st==="open")continue;if(Math.hypot(P.x-p.x,P.z-p.z)>26)continue;
+let drawGates=function(){const tt=performance.now()/1000;for(const p of MAP.passes){const st=gateState(p.a);if(st==="open")continue;if(Math.hypot(P.x-p.x,P.z-p.z)>26)continue;
   const ew=p.dir==="E"||p.dir==="W",w=PASSW+1.6,a0=ew?[p.x,p.z-w]:[p.x-w,p.z],a1=ew?[p.x,p.z+w]:[p.x+w,p.z];const H=2.6;
   const q=[toScreen([a0[0],0,a0[1]]),toScreen([a1[0],0,a1[1]]),toScreen([a1[0],H,a1[1]]),toScreen([a0[0],H,a0[1]])];if(q.some(v=>v[2]<0))continue;
   const col=st==="soon"?"170,180,200":"255,90,60";oc.save();oc.globalCompositeOperation="lighter";
@@ -2312,6 +2312,59 @@ function drawSpecials(){const tt=performance.now()/1000;for(const e of ENEMIES){
   const c=e.boss?"255,80,50":"255,200,80";oc.strokeStyle=`rgba(${c},${0.55+0.3*Math.sin(tt*4)})`;oc.lineWidth=3;oc.beginPath();oc.arc(0,0,R,0,7);oc.stroke();
   const g=oc.createRadialGradient(0,0,0,0,0,R);g.addColorStop(0,`rgba(${c},.25)`);g.addColorStop(1,`rgba(${c},0)`);oc.fillStyle=g;oc.beginPath();oc.arc(0,0,R,0,7);oc.fill();oc.restore();
   if(e.elite){const h=toScreen([e.x,ETYPE[e.t].hpY*e.sc+0.25,e.z]);oc.fillStyle="#ffd35a";oc.font="900 13px system-ui";oc.textAlign="center";oc.strokeStyle="rgba(0,0,0,.7)";oc.lineWidth=3;oc.strokeText("★ Seçkin",h[0],h[1]);oc.fillText("★ Seçkin",h[0],h[1]);}}}
+
+// ================= monumental gates at the passes (replace the light barrier) =================
+const GSTYLE=[{p:"#b98d5c",pd:"#8f6a42",d:"#6b4426",dd:"#4e3018",band:"#b07a32",m:2},{p:"#d6b27a",pd:"#a8844f",d:"#c49a5e",dd:"#8f6d3e",band:"#8f6d3e",m:2},
+ {p:"#ece8e0",pd:"#c9c2b4",d:"#d6cfc1",dd:"#a8a092",band:"#9fb4c8",m:2},{p:"#8a7a45",pd:"#5e5230",d:"#6a5530",dd:"#4a3a20",band:"#3f5a2a",m:0},
+ {p:"#7d746a",pd:"#5a534b",d:"#5f574e",dd:"#433d36",band:"#2e2a26",m:2},{p:"#3a3036",pd:"#241c22",d:"#2e2630",dd:"#1a141c",band:"#7a2e3a",m:2},
+ {p:"#6a5e4e",pd:"#463c30",d:"#55493a",dd:"#3a3026",band:"#c9a45a",m:2},{p:"#b98d5c",pd:"#7a5a38",d:"#6b4426",dd:"#4e3018",band:"#e2b247",m:2}];
+const GHW=PASSW+1;// half opening
+function gateFrame(s){const mb=new MB();mb.smooth=false;const P=hex(s.p),Pd=hex(s.pd),m=s.m;
+ for(const sz of[-1,1]){const z0=sz*(GHW+0.05),z1=sz*(GHW+1.15);mb.bbox(-0.75,-0.4,Math.min(z0,z1),0.75,4.3,Math.max(z0,z1),0.06,P,Pd,Pd,m);
+  mb.bbox(-0.9,-0.4,Math.min(z0,z1)-0.12,0.9,0.5,Math.max(z0,z1)+0.12,0.06,Pd,Pd,Pd,m);mb.bbox(-0.88,4.3,Math.min(z0,z1)-0.1,0.88,4.6,Math.max(z0,z1)+0.1,0.05,P,Pd,Pd,m);}
+ mb.bbox(-0.34,3.75,-GHW-1.3,0.34,4.3,GHW+1.3,0.05,P,Pd,Pd,m);mb.bbox(-0.42,4.3,-GHW-1.4,0.42,4.5,GHW+1.4,0.04,Pd,Pd,Pd,m);
+ mb.smooth=true;return upload(mb);}
+function gateLeaf(s){const mb=new MB();mb.smooth=false;const D=hex(s.d),Dd=hex(s.dd),B=hex(s.band);
+ mb.box(-0.2,0,0,0.2,3.5,GHW,D,Dd,Dd,0);mb.box(-0.24,3.5,0,0.24,3.62,GHW,B,B,B,0);for(let i=1;i<6;i++)mb.box(-0.17,0.02,i*GHW/6-0.03,0.17,3.48,i*GHW/6+0.03,Dd,Dd,Dd,0);
+ for(const y of[0.45,1.75,3.05])mb.box(-0.2,y,0.05,0.2,y+0.18,GHW-0.05,B,B,B,0);
+ for(const y of[0.45,1.75,3.05])for(const zz of[0.35,GHW*0.5,GHW-0.35])for(const sx of[-1,1])mb.sph(sx*0.21,y+0.09,zz,0.045,0.045,0.045,Dd,4,6);
+ mb.smooth=true;return upload(mb);}
+const SEAL=(()=>{const mb=new MB();mb.smooth=true;mb.xf(M4.Rz(Math.PI/2));mb.cyl(0,-0.24,0,0.95,0.95,0.48,28,[1,1,1],true,1);mb.xf(null);
+ for(let k=0;k<8;k++){const a=k/8*6.283;mb.box(-0.27,Math.sin(a)*0.62-0.07,Math.cos(a)*0.62-0.07,0.27,Math.sin(a)*0.62+0.07,Math.cos(a)*0.62+0.07,[1,1,1],[1,1,1],[1,1,1],1);}return upload(mb);})();
+const CHAIN=(()=>{const mb=new MB();mb.smooth=true;for(let i=0;i<14;i++){const f=i/13;mb.sph(0,0.6+f*2.6,-GHW*0.95+f*GHW*1.9,0.09,0.09,0.06,hex("#5a5550"),4,6);}
+ for(let i=0;i<14;i++){const f=i/13;mb.sph(0,3.2-f*2.6,-GHW*0.95+f*GHW*1.9,0.09,0.09,0.06,hex("#5a5550"),4,6);}return upload(mb);})();
+const GFR=GSTYLE.map(gateFrame),GLF=GSTYLE.map(gateLeaf);
+const GANIM={};// pass.a -> opening progress 0..1 (1 = fully open)
+function gateParts(){const out=[];if(!MAP)return out;const tt=performance.now()/1000;
+ for(const p of MAP.passes){if(Math.hypot(P.x-p.x,P.z-p.z)>45)continue;const s=Math.min(p.a,7),ew=p.dir==="E"||p.dir==="W";
+  const st=gateState(p.a);let o=GANIM[p.a];if(o===undefined)o=GANIM[p.a]=st==="open"?1:0;
+  if(st==="open"&&o<1){o=GANIM[p.a]=Math.min(1,o+dtLast*0.45);}
+  const gy=groundY(p.x,p.z);// local x = through the passage (toward region b), local z = across it
+  const toB={E:1,W:-1,S:1,N:-1}[p.dir];const base=M4.chain(M4.T(p.x,gy,p.z),M4.Ry(ew?(toB>0?0:Math.PI):(toB>0?-Math.PI/2:Math.PI/2)));
+  out.push([GFR[s],base,[1,1,1]]);
+  const e=o*o*(3-2*o),ang=e*1.45;
+  out.push([GLF[s],M4.chain(base,M4.T(0,0,-GHW),M4.Ry(-ang)),[1,1,1]]);
+  out.push([GLF[s],M4.chain(base,M4.T(0,0,GHW),M4.Ry(ang),M4.S(1,1,-1)),[1,1,1]]);
+  if(o<1){const sealK=st==="open"?1+o*3:1;const fade=st==="open"?Math.max(0,1-o*4):1;
+   const c=st==="soon"?[0.55,0.58,0.65]:[1.6+0.5*Math.sin(tt*3),0.35,0.2];
+   if(fade>0)out.push([SEAL,M4.chain(base,M4.T(0,1.95,0),M4.S(sealK,sealK,sealK)),[c[0]*fade,c[1]*fade,c[2]*fade]]);
+   if(st==="soon"){for(const sx of[-1,1])out.push([CHAIN,M4.chain(base,M4.T(sx*0.24,0,0)),[1,1,1]]);}}}
+ return out;}
+let GATEP=[];
+// opening moment: dust and a flash when the seal breaks
+checkProgress=(function(base){return function(){const before=PROG.open.slice();base();for(let r=0;r<9;r++)if(PROG.open[r]&&!before[r]){GANIM[r]=0.0001;const p=MAP.passes.find(q=>q.a===r);
+  if(p){fxChunks(p.x,1.9,p.z,26,["#ff8a5a","#ffd35a","#8d8a84"],6,1.4);fxSmoke(p.x,0.3,p.z,16,"205,185,150");FX.push({k:"flash",x:p.x,y:1.9,z:p.z,t:0,life:0.4,crit:true});SHAKE=Math.max(SHAKE,0.35);}}};})(checkProgress);
+drawGates=function(){const tt=performance.now()/1000;for(const p of MAP.passes){const st=gateState(p.a);const o=GANIM[p.a]||0;if(st==="open"&&o>0.3)continue;if(Math.hypot(P.x-p.x,P.z-p.z)>26)continue;
+  const s=toScreen([p.x,2.2,p.z]);if(s[2]<0)continue;const[,ppm]=ppmAt(p.x,2.2,p.z);const R=Math.max(16,ppm*0.75)*(st==="open"?1+o*3:1),a=st==="open"?Math.max(0,1-o*3.3):1;
+  const col=st==="soon"?"175,182,196":"255,92,60";oc.save();oc.globalAlpha=a;oc.translate(s[0],s[1]);oc.globalCompositeOperation="lighter";
+  const g=oc.createRadialGradient(0,0,R*0.3,0,0,R*1.9);g.addColorStop(0,`rgba(${col},.55)`);g.addColorStop(1,`rgba(${col},0)`);oc.fillStyle=g;oc.beginPath();oc.arc(0,0,R*1.9,0,7);oc.fill();
+  oc.globalCompositeOperation="source-over";oc.fillStyle=st==="soon"?"#3d4048":"#4a1a10";oc.strokeStyle=`rgba(${col},1)`;oc.lineWidth=3;oc.beginPath();oc.arc(0,0,R,0,7);oc.fill();oc.stroke();
+  oc.lineWidth=1.5;oc.beginPath();oc.arc(0,0,R*0.74,0,7);oc.stroke();oc.save();oc.rotate(tt*(st==="soon"?0.1:0.5));
+  oc.fillStyle=`rgba(${col},${0.7+0.3*Math.sin(tt*3)})`;oc.font=`700 ${Math.round(R*0.34)}px serif`;oc.textAlign="center";oc.textBaseline="middle";
+  for(let k=0;k<8;k++){const an=k/8*6.283;oc.fillText("✦◈❖✧◆✶◇✵"[k],Math.cos(an)*R*0.87,Math.sin(an)*R*0.87);}oc.restore();
+  oc.fillStyle=`rgba(${col},1)`;const lw=R*0.36,lh=R*0.3;oc.fillRect(-lw/2,-lh*0.1,lw,lh);oc.strokeStyle=`rgba(${col},1)`;oc.lineWidth=R*0.09;oc.beginPath();oc.arc(0,-lh*0.1,lw*0.32,Math.PI,0);oc.stroke();
+  if(st==="soon"){oc.strokeStyle="rgba(120,118,112,.95)";oc.lineWidth=R*0.12;oc.beginPath();oc.moveTo(-R*1.15,-R*0.9);oc.lineTo(R*1.15,R*0.9);oc.moveTo(R*1.15,-R*0.9);oc.lineTo(-R*1.15,R*0.9);oc.stroke();}
+  oc.restore();}};
 
 // ================= tablet slots =================
 const TABS=["Ateş","Rüzgâr","Kan","Taş","Gölge","Ses","Ad"];
