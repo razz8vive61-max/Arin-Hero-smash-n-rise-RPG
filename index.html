@@ -82,6 +82,18 @@
   #invui .srows{margin:4px 0 8px}
   #invui .srows div{display:flex;justify-content:space-between;padding:6px 2px;border-bottom:1px solid rgba(255,255,255,.07);font-size:13px}
   #invui .srows b{color:#ffd35a}
+  #quest{margin-top:6px;pointer-events:auto;background:rgba(10,8,6,.5);border:1px solid rgba(255,220,150,.25);border-radius:10px;padding:5px 8px;max-width:min(62vw,250px);cursor:pointer}
+  #quest .qh{font-size:11.5px;font-weight:800;color:#ffd35a;display:flex;justify-content:space-between;gap:6px}
+  #quest .qh i{font-style:normal;opacity:.7}
+  #quest .ql{font-size:11px;padding:1.5px 0;opacity:.95}
+  #quest .ql b{color:#ffd35a;font-weight:800;margin-left:3px}
+  #quest .ql.ok{opacity:.55;text-decoration:line-through}
+  #bossbar{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 150px);transform:translateX(-50%);width:min(70vw,300px);text-align:center;color:#fff;opacity:0;transition:opacity .3s;pointer-events:none;z-index:3}
+  #bossbar b{font-size:13px;font-weight:900;text-shadow:0 1px 3px #000;color:#ffb38a}
+  #bossbar div{height:10px;border-radius:6px;background:rgba(0,0,0,.6);border:1px solid rgba(255,120,80,.6);overflow:hidden;margin-top:3px}
+  #bossbar i{display:block;height:100%;background:linear-gradient(#ff7a5a,#c8331a)}
+  #gate small{display:block;font-size:10.5px;font-weight:700;color:#ffb3a0;margin-top:2px}
+  body.inv #quest,body.inv #bossbar{visibility:hidden}
   #modal{position:fixed;inset:0;background:rgba(6,4,2,.72);z-index:11;display:none;align-items:center;justify-content:center;touch-action:none}
   #modal.show{display:flex}
   #modal .panel{width:min(90vw,360px);background:linear-gradient(#3a2614,#22160b);border:2px solid #a8742e;border-radius:16px;padding:14px;color:#fff;box-shadow:0 10px 40px rgba(0,0,0,.6)}
@@ -1336,7 +1348,7 @@ const ETYPE={
 const REGION_EN=[["guard"],["clay"],["salt"],["clay"],["guard","clay"],["priest"],["priest","clay"],["guard"],["clay","guard"]];
 // parts for one enemy, posed by walk phase (ph), move amount (amt) and attack swing (at 0..1)
 function enemyParts(e){const out=[],amt=Math.min(1,e.spd/ETYPE[e.t].speed),ph=e.phase,at=e.atk>0?Math.sin(Math.min(1,e.atk)*Math.PI):0;
- const rs=e.rise>0?e.rise/0.7:0;let base=M4.chain(M4.T(e.x,groundY(e.x,e.z)-rs*rs*1.9,e.z),M4.Ry(e.yaw+rs*1.2),M4.S(0.95,0.95,0.95));
+ const rs=e.rise>0?Math.min(1,e.rise/0.7):0,es=0.95*(e.sc||1);let base=M4.chain(M4.T(e.x,groundY(e.x,e.z)-rs*rs*1.9*(e.sc||1),e.z),M4.Ry(e.yaw+rs*1.2),M4.S(es,es,es));
  if(e.hitT>0){const k=e.hitT/0.2;base=M4.chain(base,M4.Rx(-0.22*k),M4.S(1+0.16*k,1-0.14*k,1+0.16*k));}
  if(e.dead>0){const d=Math.min(1,e.dead/0.6);base=M4.chain(base,M4.T(0,-Math.max(0,e.dead-1.2)*0.8,0),M4.Rx(-d*1.45));}
  const legs=(hip,thighM,shinM,footM,sep)=>{for(const side of[1,-1]){const p=ph+(side>0?0:Math.PI);const th=Math.sin(p)*0.55*amt,kn=(Math.cos(p)>0?0.12+Math.cos(p)*0.9:0.1)*amt;
@@ -1416,7 +1428,7 @@ function damageEnemy(e,amt,crit,o={}){e.hp-=amt;e.showHp=4;if(e.state==="idle"||
  if(o.dot){addFloat(e.x,ETYPE[e.t].hpY-0.2,e.z,String(amt),o.col||"#ff9a40",false);}else{e.flash=0.14;addFloat(e.x,ETYPE[e.t].hpY,e.z,crit?amt+"!":String(amt),crit?"#ffd23a":"#ffffff",crit);
  const dx=e.x-P.x,dz=e.z-P.z,l=Math.hypot(dx,dz)||1,kb=o.nokb?0.08:o.kb!==undefined?o.kb:crit?0.5:0.25;if(eFree(e,e.x+dx/l*kb,e.z+dz/l*kb)){e.x+=dx/l*kb;e.z+=dz/l*kb;}
  fxHit(e,crit);}
- if(e.hp<=0){e.hp=0;e.dead=0.001;e.state="dead";e.respawn=30;fxDeath(e);gainXP(Math.max(1,Math.round(e.hpMax/10)),e);}}
+ if(e.hp<=0){e.hp=0;e.dead=0.001;e.state="dead";e.respawn=30;fxDeath(e);gainXP(Math.max(1,Math.round(e.hpMax/10*(1+e.r*0.8)*(e.elite?5:1)*(e.boss?6:1))),e);onKill(e);}}
 function damagePlayer(amt){if(PL.dead>0||PL.inv>0)return;PL.hp-=amt;PL.regenT=0;addFloat(P.x,1.9,P.z,"-"+amt,"#ff5a4a",false);P.flash=0.15;fxPlayerHit();
  if(PL.hp<=0){PL.hp=0;PL.dead=0.001;}}
 function respawnPlayer(){P.x=SHR.x;P.z=SHR.z+1.9;P.yaw=P.tYaw=0;P.spd=0;cam.x=P.x;cam.z=P.z;PL.hp=PL.hpMax;PL.dead=0;PL.inv=2;
@@ -1435,7 +1447,7 @@ function updCombat(dt){
  if(PL.target&&PL.atkCd<=0&&P.atk<=0){P.atk=0.0001;P.atkHit=false;startAttack();PL.atkCd=atkCd();}
  if(PL.target&&!P.moving)P.tYaw=Math.atan2(PL.target.x-P.x,PL.target.z-P.z);
  if(P.atk>0){P.atk+=dt/curAtk().dur;{const ht=hitTimes();while(P.hitIdx<ht.length&&P.atk>=ht[P.hitIdx]){weapStrike(P.hitIdx);P.hitIdx++;}}if(P.atk>=1)P.atk=0;}
- updDrops(dt);updArrows(dt);updZones(dt);
+ updDrops(dt);updArrows(dt);updZones(dt);progTick(dt);updBossBar();
  // enemies: shared path field toward the player
  {const px=Math.floor(P.x),pz=Math.floor(P.z);flowT-=dt;if(!FLOW||flowT<=0||FLOW.cx!==px||FLOW.cz!==pz){FLOW=bfsField(px,pz,FR);FLOW.cx=px;FLOW.cz=pz;flowT=0.6;}}
  for(const e of ENEMIES){const T=ETYPE[e.t];e.flash=Math.max(0,e.flash-dt);e.hitT=Math.max(0,(e.hitT||0)-dt);e.showHp=Math.max(0,e.showHp-dt);
@@ -1460,8 +1472,8 @@ function updCombat(dt){
   if(dP<0.55&&dP>0){const push=(0.55-dP);if(eFree(e,e.x-(P.x-e.x)/dP*push,e.z-(P.z-e.z)/dP*push)){e.x-=(P.x-e.x)/dP*push;e.z-=(P.z-e.z)/dP*push;}}}
  for(const f of FLOATS)f.t+=dt;FLOATS=FLOATS.filter(f=>f.t<1.1);
  updFX(dt);}
-function drawCombatOverlay(){drawZones();drawDrops();drawArrowFX();weaponGlow();
- for(const e of ENEMIES){if(e.state==="dead"||e.showHp<=0)continue;const s=toScreen([e.x,ETYPE[e.t].hpY,e.z]);if(s[2]<0)continue;const w=46,a=Math.min(1,e.showHp);
+function drawCombatOverlay(){drawGates();drawSpecials();drawZones();drawDrops();drawArrowFX();weaponGlow();
+ for(const e of ENEMIES){if(e.state==="dead"||e.showHp<=0||e.boss)continue;const s=toScreen([e.x,ETYPE[e.t].hpY*(e.sc||1),e.z]);if(s[2]<0)continue;const w=46,a=Math.min(1,e.showHp);
   oc.globalAlpha=a;oc.fillStyle="rgba(0,0,0,.6)";oc.fillRect(s[0]-w/2-1,s[1]-1,w+2,7);oc.fillStyle="#e2483b";oc.fillRect(s[0]-w/2,s[1],w*e.hp/e.hpMax,5);oc.globalAlpha=1;}
  drawFX();
  oc.textAlign="center";oc.textBaseline="middle";
@@ -1739,7 +1751,7 @@ function drawOverlay(){oc.setTransform(dpr,0,0,dpr,0,0);oc.clearRect(0,0,W,H);if
   else{const lx=px(Rg.L.x+Rg.L.F/2),lz=pz(Rg.L.y+Rg.L.F/2);oc.fillStyle="#ffd35a";oc.strokeStyle="#3a2708";oc.lineWidth=1.5;oc.beginPath();oc.arc(lx,lz,4.5,0,7);oc.fill();oc.stroke();}}
  if(typeof SHR!=="undefined"&&SHR){const sx=px(SHR.x),sz=pz(SHR.z);oc.fillStyle="#9fe7ff";oc.strokeStyle="#0b3442";oc.lineWidth=1.5;oc.beginPath();oc.moveTo(sx,sz-5);oc.lineTo(sx+4,sz);oc.lineTo(sx,sz+5);oc.lineTo(sx-4,sz);oc.closePath();oc.fill();oc.stroke();}
  oc.fillStyle="#ff3b30";oc.strokeStyle="rgba(60,0,0,.8)";oc.lineWidth=1;for(const e of ENEMIES){if(e.state==="dead"||COV[e.r]>0.5)continue;const ex=px(e.x),ez=pz(e.z);if(ex<x0||ex>x0+S||ez<y0||ez>y0+S)continue;oc.beginPath();oc.arc(ex,ez,2.1,0,7);oc.fill();oc.stroke();}
- for(const p of MAP.passes){const gx=px(p.x),gz=pz(p.z);if(gx<x0-4||gx>x0+S+4||gz<y0-4||gz>y0+S+4)continue;oc.fillStyle="#7dff7a";oc.strokeStyle="rgba(0,0,0,.7)";oc.lineWidth=1.5;oc.beginPath();oc.arc(gx,gz,4,0,7);oc.fill();oc.stroke();}
+ for(const p of MAP.passes){const gx=px(p.x),gz=pz(p.z);if(gx<x0-4||gx>x0+S+4||gz<y0-4||gz>y0+S+4)continue;oc.fillStyle=gateCol(p);oc.strokeStyle="rgba(0,0,0,.7)";oc.lineWidth=1.5;oc.beginPath();oc.arc(gx,gz,4,0,7);oc.fill();oc.stroke();}
  oc.restore();oc.lineWidth=2.5;oc.strokeStyle="rgba(255,255,255,.75)";oc.beginPath();oc.roundRect?oc.roundRect(x0,y0,S,S,12):oc.rect(x0,y0,S,S);oc.stroke();
  oc.save();oc.translate(px(P.x),pz(P.z));oc.rotate(-P.yaw+Math.PI);oc.fillStyle="#ffb02e";oc.strokeStyle="#4a2a00";oc.lineWidth=1.5;oc.beginPath();oc.moveTo(0,-7);oc.lineTo(5,5);oc.lineTo(0,2.5);oc.lineTo(-5,5);oc.closePath();oc.fill();oc.stroke();oc.restore();
  mapA+=((mapOpen?1:0)-mapA)*Math.min(1,dtLast*12);
@@ -1751,7 +1763,7 @@ function drawOverlay(){oc.setTransform(dpr,0,0,dpr,0,0);oc.clearRect(0,0,W,H);if
    else{const lx=x0+(Rg.L.x+Rg.L.F/2)*k,lz=y0+(Rg.L.y+Rg.L.F/2)*k;oc.fillStyle="#ffd35a";oc.strokeStyle="#3a2708";oc.lineWidth=1.5;oc.beginPath();oc.arc(lx,lz,4,0,7);oc.fill();oc.stroke();
     oc.font="700 11px system-ui";oc.textAlign="center";oc.textBaseline="top";oc.lineWidth=3;oc.strokeStyle="rgba(0,0,0,.75)";oc.strokeText(THEMES[Rg.r].name,rx+rs/2,ry+rs*0.62);oc.fillStyle="#fff";oc.fillText(THEMES[Rg.r].name,rx+rs/2,ry+rs*0.62);}}
   oc.fillStyle="#ff3b30";for(const e of ENEMIES){if(e.state==="dead"||COV[e.r]>0.5)continue;oc.beginPath();oc.arc(x0+e.x*k,y0+e.z*k,1.7,0,7);oc.fill();}
-  for(const p of MAP.passes){oc.fillStyle="#7dff7a";oc.strokeStyle="rgba(0,0,0,.7)";oc.lineWidth=1.5;oc.beginPath();oc.arc(x0+p.x*k,y0+p.z*k,3.5,0,7);oc.fill();oc.stroke();}
+  for(const p of MAP.passes){oc.fillStyle=gateCol(p);oc.strokeStyle="rgba(0,0,0,.7)";oc.lineWidth=1.5;oc.beginPath();oc.arc(x0+p.x*k,y0+p.z*k,3.5,0,7);oc.fill();oc.stroke();}
   oc.restore();oc.lineWidth=2;oc.strokeStyle="rgba(255,255,255,.7)";oc.strokeRect(x0,y0,S,S);
   oc.save();oc.translate(x0+P.x*k,y0+P.z*k);oc.rotate(-P.yaw+Math.PI);oc.fillStyle="#ffb02e";oc.strokeStyle="#4a2a00";oc.lineWidth=1.5;oc.beginPath();oc.moveTo(0,-9);oc.lineTo(7,7);oc.lineTo(0,3);oc.lineTo(-7,7);oc.closePath();oc.fill();oc.stroke();oc.restore();
   oc.fillStyle="#fff";oc.font="800 18px system-ui";oc.textAlign="center";oc.textBaseline="bottom";oc.fillText("Dünya Haritası",W/2,y0-12);
@@ -1791,7 +1803,7 @@ function render(t){placeMenu();if(invOpen){renderPreview(t);return;}computeVP();
  const s=toScreen([P.x,1.85,P.z]);hpEl.style.transform=`translate(${s[0]}px,${s[1]}px)`;hpnEl.style.left=s[0]+"px";hpnEl.style.top=(s[1]-1)+"px";
  let near=null;for(const p of MAP.passes){const d=Math.hypot(P.x-p.x,P.z-p.z);if(d<9&&(!near||d<near.d))near={p,d};}
  if(near){const p=near.p,to=CURR===p.a?p.b:p.a,sp=toScreen([p.x,3.2,p.z]);const arrows={E:"▶ ",W:"◀ ",S:"▼ ",N:"▲ "};const dir=CURR===p.a?p.dir:({E:"W",W:"E",S:"N",N:"S"})[p.dir];
-  gateEl.textContent=arrows[dir]+THEMES[to].name;gateEl.style.left=sp[0]+"px";gateEl.style.top=sp[1]+"px";gateEl.style.opacity=mapOpen?0:1;}else gateEl.style.opacity=0;
+  {const gs=gateState(p.a);if(gs==='open')gateEl.textContent=arrows[dir]+THEMES[to].name;else gateEl.innerHTML=`🔒 ${THEMES[to].name}<small>${gs==='soon'?'Yeni bölüm yakında':gateNeeds(p.a).join(' · ')}</small>`;}gateEl.style.left=sp[0]+"px";gateEl.style.top=sp[1]+"px";gateEl.style.opacity=mapOpen?0:1;}else gateEl.style.opacity=0;
  drawOverlay();}
 
 // ================= profile, level/XP, HUD, hero panel, menu, settings =================
@@ -1801,7 +1813,7 @@ try{const p=JSON.parse(localStorage.getItem("arin_prof")||"null");if(p&&p.nick)P
 const saveProf=()=>{try{localStorage.setItem("arin_prof",JSON.stringify(PROF));}catch(e){}};
 let LV={l:1,xp:0};try{const l=JSON.parse(localStorage.getItem("arin_lvl")||"null");if(l&&l.l)LV=l;}catch(e){}
 const saveLv=()=>{try{localStorage.setItem("arin_lvl",JSON.stringify(LV));}catch(e){}};
-const xpNeed=l=>Math.round(60*Math.pow(1.22,l-1)),hpForLv=l=>Math.round(1000*Math.pow(1.06,l-1)),SLOT_LV=[0,5,15,30];
+let xpNeed=l=>Math.round(60*Math.pow(1.22,l-1));const hpForLv=l=>Math.round(1000*Math.pow(1.06,l-1)),SLOT_LV=[0,5,15,30];
 function applyLv(){PL.hpMax=hpForLv(LV.l);PL.hp=Math.min(PL.hp,PL.hpMax);}
 applyLv();PL.hp=PL.hpMax;
 let SETS={q:2,fps:true};try{const s=JSON.parse(localStorage.getItem("arin_sets")||"null");if(s)SETS=Object.assign(SETS,s);}catch(e){}
@@ -2210,6 +2222,97 @@ PT.upperArm=part(mb=>{mb.sph(0,0.005,0,0.066,0.06,0.066,C.tunic,7,12);mb.cyl(0,-
  mb.cyl(0,-UA,0,0.036,0.044,UA-0.07,10,C.skin,false);mb.sph(0,-0.12,0.012,0.042,0.045,0.04,C.skin,6,10);mb.sph(0,-UA,0,0.039,0.042,0.039,C.skinD,6,10);});
 for(const m of[PT.upperArm,FORE_L,FORE_R,PT.lowerL,HAND_FIST,HAND_OPEN])m.olAll=true;
 for(const k in CHEST.own)CHEST.own[k]=true;saveChest();
+// ================= chapter progression: quests, tablets, elites, guardians, sealed gates =================
+const ACTIVE_REGIONS=5;// regions 0..4 are open in this release; the gate into region 5 says "coming soon"
+const LVREQ=[8,20,35,50,65,80,95,110],WREQ=[null,[1,30],[2,30],[3,30],[4,30],[5,30],[6,30],[6,60]],PARTS=[0,3,4,5,5,6,6,7];
+const TAB_OF=[null,0,1,2,3,4,5,6];// region -> TABLETS index
+const QDEF=r=>r===0?[{k:"kill",n:100,t:"düşman yen"},{k:"camps",n:3,t:"kampı temizle"},{k:"altar",n:1,t:"Sunakta dua et"},{k:"disc",n:1,t:"Bölgenin simgesini keşfet"}]
+ :[{k:"kill",n:[0,250,400,600,800,1000,1200,1500,0][r],t:"düşman yen"},{k:"camps",n:13,t:"kampı temizle"},{k:"elite",n:Math.min(8,r+1),t:"seçkin düşman yen"},{k:"disc",n:1,t:"Bölgenin simgesini keşfet"}];
+let PROG={kills:Array(9).fill(0),camps:Array.from({length:9},()=>[]),elite:Array(9).fill(0),altar:false,disc:Array(9).fill(false),parts:Array(9).fill(0),tab:Array(9).fill(false),guard:Array(9).fill(false),open:Array(9).fill(false),col:false};
+try{const s=JSON.parse(localStorage.getItem("arin_prog")||"null");if(s)PROG=Object.assign(PROG,s);}catch(e){}
+const saveProg=()=>{try{localStorage.setItem("arin_prog",JSON.stringify(PROG));}catch(e){}};
+xpNeed=l=>Math.round(40*Math.pow(l,2.15));
+function qProg(r,q){if(q.k==="kill")return Math.min(q.n,PROG.kills[r]);if(q.k==="camps")return Math.min(q.n,PROG.camps[r].length);if(q.k==="elite")return Math.min(q.n,PROG.elite[r]);if(q.k==="altar")return PROG.altar?1:0;return PROG.disc[r]?1:0;}
+const questsDone=r=>QDEF(r).every(q=>qProg(r,q)>=q.n);
+const tabletDone=r=>r===0||PROG.tab[r];
+function gateState(r){if(PROG.open[r])return"open";if(r+1>=ACTIVE_REGIONS)return"soon";return"locked";}
+const gateCol=p=>{const s=gateState(p.a);return s==="open"?"#7dff7a":s==="soon"?"#9aa0aa":"#ff4a3a";};
+// ---- elites and guardians ----
+function regionOf(x,z){for(const g of MAP.regions)if(x>=g.ox&&x<g.ox+N&&z>=g.oz&&z<g.oz+N)return g.r;return 0;}
+function setupSpecials(){let id=0;const seen=new Map();for(const e of ENEMIES){if(!seen.has(e.camp)){seen.set(e.camp,id++);}e.camp.id=seen.get(e.camp);}
+ const R=rng(777);for(let r=0;r<9;r++){if(r===0)continue;const pool=ENEMIES.filter(e=>e.r===r);for(let k=0;k<4&&pool.length;k++){const e=pool.splice(Math.floor(R()*pool.length),1)[0];
+  e.elite=true;e.sc=1.35;e.hpMax*=6;e.hp=e.hpMax;e.dmg=Math.round(e.dmg*2.2);}}
+ for(let r=0;r<8;r++)if(!PROG.guard[r]&&questsDone(r)&&tabletDone(r))spawnGuardian(r);}
+function spawnGuardian(r){if(ENEMIES.some(e=>e.boss&&e.r===r))return;const p=MAP.passes.find(q=>q.a===r);if(!p)return;
+ const d={E:[-1,0],W:[1,0],S:[0,-1],N:[0,1]}[p.dir];let gx=p.x+d[0]*4.5,gz=p.z+d[1]*4.5;
+ for(let k=0;k<12&&!walk(Math.floor(gx),Math.floor(gz));k++){gx+=d[0];gz+=d[1];}
+ const types=REGION_EN[r],t=types.slice().sort((a,b)=>ETYPE[b].hp-ETYPE[a].hp)[0],T=ETYPE[t],mul=1+0.25*r;
+ const e={t,r,camp:{x:gx,z:gz,field:null,id:-1},hx:gx,hz:gz,x:gx,z:gz,yaw:0,tYaw:0,spd:0,phase:0,hpMax:Math.round(T.hp*mul*45),hp:0,dmg:Math.round(T.dmg*(1+0.15*r)*3),
+  state:"idle",cd:1,atk:0,hitDone:false,dead:0,respawn:0,flash:0,wander:99,wx:gx,wz:gz,seed:3,showHp:0,boss:true,sc:2.1,rise:1.2};e.hp=e.hpMax;ENEMIES.push(e);
+ if(Math.hypot(P.x-gx,P.z-gz)<60)banner(THEMES[r].name+" Muhafızı uyandı!","Geçidin önünde seni bekliyor");}
+function banner(a,b){toastEl.querySelector("b").textContent=a;toastEl.querySelector("span").textContent=b;toastEl.style.opacity=1;clearTimeout(enterRegion.t);enterRegion.t=setTimeout(()=>toastEl.style.opacity=0,2800);}
+function onKill(e){const r=e.r;PROG.kills[r]++;
+ if(e.camp&&e.camp.id>=0&&!PROG.camps[r].includes(e.camp.id)&&ENEMIES.every(q=>q.camp!==e.camp||q.state==="dead"))PROG.camps[r].push(e.camp.id);
+ if(e.elite){PROG.elite[r]++;e.respawn=90;
+  if(r>0&&!PROG.tab[r]&&Math.random()<0.4){PROG.parts[r]++;const tb=TABLETS[TAB_OF[r]];
+   if(PROG.parts[r]>=PARTS[r]){PROG.tab[r]=true;banner(tb.n+" Tableti tamamlandı!",tb.u+" kilidi açıldı");}else banner("Tablet parçası bulundu",tb.n+" Tableti "+PROG.parts[r]+"/"+PARTS[r]);
+   FX.push({k:"pillar",x:e.x,y:0,z:e.z,t:0,life:0.9,r:0.8});}}
+ if(e.boss){PROG.guard[r]=true;e.respawn=1e9;banner(THEMES[r].name+" Muhafızı yenildi!",LV.l>=LVREQ[r]?"Mühür çözülüyor…":"Geçit için Sv "+LVREQ[r]+" gerekli");
+  FX.push({k:"ring",x:e.x,y:0.05,z:e.z,t:0,life:1,r0:0.5,r1:5,col:"255,214,110"});SHAKE=Math.max(SHAKE,0.4);}
+ checkProgress();saveProg();}
+function checkProgress(){for(let r=0;r<8;r++){if(PROG.open[r])continue;
+  if(!PROG.guard[r]&&questsDone(r)&&tabletDone(r))spawnGuardian(r);
+  if(PROG.guard[r]&&LV.l>=LVREQ[r]&&r+1<ACTIVE_REGIONS){PROG.open[r]=true;const p=MAP.passes.find(q=>q.a===r);
+   if(p){FX.push({k:"pillar",x:p.x,y:0,z:p.z,t:0,life:1.2,r:2});FX.push({k:"ring",x:p.x,y:0.05,z:p.z,t:0,life:1.2,r0:0.5,r1:6,col:"125,255,122"});}
+   banner("Geçit açıldı!",THEMES[r+1].name+" yolu artık açık");}}
+ updQuestUI();}
+// ---- sealed gates block the way ----
+function gateBlocks(x,z){for(const p of MAP.passes){if(PROG.open[p.a])continue;const ew=p.dir==="E"||p.dir==="W";const across=ew?Math.abs(x-p.x):Math.abs(z-p.z),along=ew?Math.abs(z-p.z):Math.abs(x-p.x);
+  if(across<0.75&&along<PASSW+2)return true;}return false;}
+free=(function(base){return function(x,z){return base(x,z)&&!gateBlocks(x,z);};})(free);
+eFree=(function(base){return function(e,x,z){return base(e,x,z)&&!gateBlocks(x,z);};})(eFree);
+// ---- quest panel ----
+const qEl=document.createElement("div");qEl.id="quest";document.getElementById("top").appendChild(qEl);let qOpen=true,qR=-1;
+qEl.addEventListener("pointerdown",e=>{e.stopPropagation();qOpen=!qOpen;updQuestUI();});
+function updQuestUI(){const r=CURR<0?0:CURR;qR=r;const th=THEMES[r];
+ if(r>=ACTIVE_REGIONS){qEl.innerHTML="";return;}
+ if(PROG.open[r]||r===8){qEl.innerHTML=`<div class="qh">✓ ${th.name} tamamlandı</div>`;return;}
+ const qs=QDEF(r),done=qs.filter(q=>qProg(r,q)>=q.n).length;
+ let h=`<div class="qh">📜 ${th.name} · Görevler ${done}/${qs.length} <i>${qOpen?"▾":"▸"}</i></div>`;
+ if(qOpen){h+=qs.map(q=>{const v=qProg(r,q),ok=v>=q.n;return`<div class="ql ${ok?"ok":""}">${ok?"✓":"○"} ${q.n>1?fmtN(q.n)+" ":""}${q.t}${q.n>1&&!ok?` <b>${fmtN(v)}/${fmtN(q.n)}</b>`:""}</div>`;}).join("");
+  if(r>0){const tb=TABLETS[TAB_OF[r]];h+=`<div class="ql ${PROG.tab[r]?"ok":""}">${PROG.tab[r]?"✓":"○"} ${tb.n} Tableti <b>${Math.min(PROG.parts[r],PARTS[r])}/${PARTS[r]}</b></div>`;}
+  h+=`<div class="ql ${LV.l>=LVREQ[r]?"ok":""}">${LV.l>=LVREQ[r]?"✓":"○"} Seviye ${LVREQ[r]} <b>${Math.min(LV.l,LVREQ[r])}/${LVREQ[r]}</b></div>`;
+  h+=`<div class="ql ${PROG.guard[r]?"ok":""}">${PROG.guard[r]?"✓":"○"} Muhafızı yen${!PROG.guard[r]&&!(questsDone(r)&&tabletDone(r))?" <b>uyuyor</b>":""}</div>`;}
+ qEl.innerHTML=h;}
+// ---- per frame: altar prayer, landmark discovery, gate signs, barrier drawing ----
+let prayT=0,qTick=0;
+function progTick(dt){const r=regionOf(P.x,P.z);
+ if(!PROG.altar&&SHR&&Math.hypot(P.x-SHR.x,P.z-SHR.z)<2.6){prayT+=dt;if(prayT>1.5){PROG.altar=true;banner("Sunakta dua ettin","Tanrıların gözü üzerinde");checkProgress();saveProg();}}else prayT=0;
+ const Rg=MAP.regions[r];if(Rg&&!PROG.disc[r]&&Rg.L){const lx=Rg.L.x+Rg.L.F/2,lz=Rg.L.y+Rg.L.F/2;if(Math.hypot(P.x-lx,P.z-lz)<Rg.L.F/2+4){PROG.disc[r]=true;banner("Keşfedildi!",THEMES[r].name+" simgesi");checkProgress();saveProg();}}
+ qTick+=dt;if(qTick>0.6||qR!==CURR){qTick=0;checkLevelGate();updQuestUI();}}
+let lastLv=0;function checkLevelGate(){if(LV.l!==lastLv){lastLv=LV.l;checkProgress();saveProg();}}
+function gateNeeds(r){const n=[];if(r+1>=ACTIVE_REGIONS)return["Yeni bölüm yakında"];const qs=QDEF(r);const left=qs.filter(q=>qProg(r,q)<q.n).length;
+ if(left)n.push(left+" görev");if(!tabletDone(r))n.push(TABLETS[TAB_OF[r]].n+" Tableti");if(LV.l<LVREQ[r])n.push("Sv "+LVREQ[r]);if(!PROG.guard[r])n.push("Muhafız");return n;}
+function drawGates(){const tt=performance.now()/1000;for(const p of MAP.passes){const st=gateState(p.a);if(st==="open")continue;if(Math.hypot(P.x-p.x,P.z-p.z)>26)continue;
+  const ew=p.dir==="E"||p.dir==="W",w=PASSW+1.6,a0=ew?[p.x,p.z-w]:[p.x-w,p.z],a1=ew?[p.x,p.z+w]:[p.x+w,p.z];const H=2.6;
+  const q=[toScreen([a0[0],0,a0[1]]),toScreen([a1[0],0,a1[1]]),toScreen([a1[0],H,a1[1]]),toScreen([a0[0],H,a0[1]])];if(q.some(v=>v[2]<0))continue;
+  const col=st==="soon"?"170,180,200":"255,90,60";oc.save();oc.globalCompositeOperation="lighter";
+  const g=oc.createLinearGradient(0,q[0][1],0,q[3][1]);g.addColorStop(0,`rgba(${col},.55)`);g.addColorStop(0.6,`rgba(${col},.18)`);g.addColorStop(1,`rgba(${col},0)`);
+  oc.fillStyle=g;oc.beginPath();oc.moveTo(q[0][0],q[0][1]);for(let i=1;i<4;i++)oc.lineTo(q[i][0],q[i][1]);oc.closePath();oc.fill();
+  oc.strokeStyle=`rgba(${col},${0.6+0.3*Math.sin(tt*3)})`;oc.lineWidth=2;oc.beginPath();oc.moveTo(q[0][0],q[0][1]);oc.lineTo(q[1][0],q[1][1]);oc.stroke();
+  oc.fillStyle=`rgba(${col},.9)`;oc.font="700 16px serif";oc.textAlign="center";oc.textBaseline="middle";const R="𒀭𒆠𒈗𒌋𒊩𒉿";
+  for(let i=0;i<6;i++){const f=(i+0.5)/6,y=0.6+0.5*Math.sin(tt*1.5+i);const pp=toScreen([a0[0]+(a1[0]-a0[0])*f,y,a0[1]+(a1[1]-a0[1])*f]);oc.globalAlpha=0.5+0.5*Math.sin(tt*2+i*1.3);oc.fillText(["◈","✦","❖","✧","◆","✶"][i],pp[0],pp[1]);}
+  oc.restore();}}
+// boss bar
+const bossEl=document.createElement("div");bossEl.id="bossbar";bossEl.innerHTML='<b></b><div><i></i></div>';document.body.appendChild(bossEl);
+function updBossBar(){let b=null;for(const e of ENEMIES)if(e.boss&&e.state!=="dead"&&Math.hypot(e.x-P.x,e.z-P.z)<16)b=e;
+ if(!b||invOpen){bossEl.style.opacity=0;return;}bossEl.style.opacity=1;bossEl.querySelector("b").textContent=THEMES[b.r].name+" Muhafızı";bossEl.querySelector("i").style.width=(b.hp/b.hpMax*100)+"%";}
+function drawSpecials(){const tt=performance.now()/1000;for(const e of ENEMIES){if(!(e.elite||e.boss)||e.state==="dead")continue;const s=toScreen([e.x,0.05,e.z]);if(s[2]<0)continue;
+  const[,ppm]=ppmAt(e.x,0.05,e.z);const R=ppm*(e.boss?1.4:0.75);oc.save();oc.translate(s[0],s[1]);oc.scale(1,0.5);oc.globalCompositeOperation="lighter";
+  const c=e.boss?"255,80,50":"255,200,80";oc.strokeStyle=`rgba(${c},${0.55+0.3*Math.sin(tt*4)})`;oc.lineWidth=3;oc.beginPath();oc.arc(0,0,R,0,7);oc.stroke();
+  const g=oc.createRadialGradient(0,0,0,0,0,R);g.addColorStop(0,`rgba(${c},.25)`);g.addColorStop(1,`rgba(${c},0)`);oc.fillStyle=g;oc.beginPath();oc.arc(0,0,R,0,7);oc.fill();oc.restore();
+  if(e.elite){const h=toScreen([e.x,ETYPE[e.t].hpY*e.sc+0.25,e.z]);oc.fillStyle="#ffd35a";oc.font="900 13px system-ui";oc.textAlign="center";oc.strokeStyle="rgba(0,0,0,.7)";oc.lineWidth=3;oc.strokeText("★ Seçkin",h[0],h[1]);oc.fillText("★ Seçkin",h[0],h[1]);}}}
+
 // ================= tablet slots =================
 const TABS=["Ateş","Rüzgâr","Kan","Taş","Gölge","Ses","Ad"];
 const LOCK='<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4"><rect x="5" y="10" width="14" height="11" rx="2" fill="rgba(255,255,255,.25)"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>';
@@ -2257,7 +2360,7 @@ function clearPlaza(cx,cz,R){const W=MAP.W,at=(x,z)=>z*W+x;
 function initWorld(){const t0=performance.now();MAP=genWorld();{const S=MAP.regions[0].S;clearPlaza(S.x,S.y,5);SHR={x:S.x+0.5,z:S.y+0.5};MAP.obj[S.y*MAP.W+S.x]={t:"altar"};MAP.obj[(S.y-1)*MAP.W+S.x]={t:"altar"};MAP.obj[(S.y-1)*MAP.W+S.x-1]={t:"altar"};MAP.obj[(S.y-1)*MAP.W+S.x+1]={t:"altar"};}WORLD=prepWorld();uploadGD();buildMinimap();
  let st={};try{st=JSON.parse(localStorage.getItem("stc3d_world1")||"{}");}catch(e){}
  if(Array.isArray(st.d))st.d.forEach((v,i)=>{DISC[i]=!!v;COV[i]=v?0:1;});
- P.x=SHR.x;P.z=SHR.z+1.9;spawnEnemies();
+ P.x=SHR.x;P.z=SHR.z+1.9;spawnEnemies();setupSpecials();
  P.yaw=P.tYaw=0;cam.x=P.x;cam.z=P.z;ENV=envAt(P.x,P.z);updRegion(0.001);streamChunks(999);
  window.__build={ms:Math.round(performance.now()-t0),verts:WORLD.nv};
  fadeEl.style.opacity=0;}
