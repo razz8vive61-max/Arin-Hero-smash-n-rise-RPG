@@ -287,6 +287,31 @@ body.inv #dbtn,body.uopen #dbtn{display:none}
 #modal .lnk{padding:7px 12px;border-radius:9px;background:linear-gradient(#f0c35a,#c48a2c);color:#2a1708;font-size:12.5px;cursor:pointer;white-space:nowrap}
 #modal .lnk.off{background:rgba(255,255,255,.1);color:rgba(255,255,255,.5);cursor:default}
 #modal .pid{font-size:13px;color:#ffd35a;letter-spacing:.5px}
+#sbtn{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 92px);transform:translateX(-50%) scale(.9);padding:13px 26px;border-radius:14px;background:linear-gradient(#f0c35a,#c48a2c);color:#2a1708;font-weight:900;font-size:17px;border:2px solid #fff3c4;box-shadow:0 4px 18px rgba(0,0,0,.5),0 0 22px rgba(255,211,90,.5);z-index:9;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;touch-action:none;cursor:pointer}
+#sbtn.show{opacity:1;pointer-events:auto;transform:translateX(-50%) scale(1);animation:sbp 1.4s ease-in-out infinite}
+@keyframes sbp{50%{box-shadow:0 4px 18px rgba(0,0,0,.5),0 0 34px rgba(255,211,90,.85)}}
+#sarw{position:fixed;left:-14px;top:-30px;width:28px;height:30px;pointer-events:none;z-index:5;opacity:0;transition:opacity .3s}
+#sarw.show{opacity:1}
+#sarw::before{content:"";position:absolute;left:0;top:0;width:0;height:0;border-left:14px solid transparent;border-right:14px solid transparent;border-top:22px solid #ffd35a;filter:drop-shadow(0 2px 3px rgba(0,0,0,.7));animation:sab .8s ease-in-out infinite}
+@keyframes sab{50%{transform:translateY(-9px)}}
+#srev{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:13;pointer-events:none;opacity:0;transition:opacity .25s}
+#srev.show{opacity:1;pointer-events:auto}
+#srev .rc{display:flex;flex-direction:column;align-items:center;gap:6px;padding:16px 22px 18px;border-radius:18px;border:2px solid;background:linear-gradient(#3a2614,#22160b);color:#fff;transform:scale(.8);transition:transform .3s cubic-bezier(.3,1.6,.5,1);max-width:80vw;text-align:center}
+#srev.show .rc{transform:scale(1)}
+#srev .rc small{font-size:12px;letter-spacing:1px;text-transform:uppercase;color:#ffd35a;font-weight:900}
+#srev .pic{width:120px;height:120px;display:flex;align-items:center;justify-content:center}
+#srev .pic img,#srev .pic canvas{max-width:100%;max-height:100%}
+#srev .rc b{font-size:20px}
+#srev .rc span{font-size:13px;opacity:.8}
+#srev .rc em{font-style:normal;font-size:12.5px;color:#9be37f;margin-top:4px}
+.det .wup{display:flex;align-items:center;gap:10px;margin:10px 0 2px;padding:9px 10px;border-radius:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,211,90,.25)}
+.det .wl{flex:1;font-size:13px;line-height:1.35}
+.det .wl small{font-size:10.5px;opacity:.65}
+.det .wl b.nx{color:#9be37f}
+.det .wbtn{min-width:84px;display:flex;align-items:center;justify-content:center;gap:5px;padding:10px 8px;border-radius:10px;background:linear-gradient(#5fc24a,#2f8a25);box-shadow:0 2px 0 #1c5a16;font-size:13.5px;color:#fff;cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:none}
+.det .wbtn.no{background:linear-gradient(#5a4a3a,#3a2e24);box-shadow:0 2px 0 #241a12;opacity:.85}
+.det .wbtn.lk,.det .wbtn.mx{background:rgba(255,255,255,.08);box-shadow:none;color:rgba(255,255,255,.6)}
+.det .wbtn.lk .cn,.det .wbtn.mx .cn{display:none}
 </style>
 </head>
 <body>
@@ -1525,7 +1550,7 @@ function updCombat(dt){
  PL.atkCd=Math.max(0,PL.atkCd-dt);let best=null,bd=1e9;
  for(const e of ENEMIES){if(e.state==="dead")continue;const d=Math.hypot(e.x-P.x,e.z-P.z);if(d<bd){bd=d;best=e;}}
  PL.target=best&&bd<curAtk().range+ETYPE[best.t].r?best:null;
- if(PL.target&&PL.atkCd<=0&&P.atk<=0){P.atk=0.0001;P.atkHit=false;startAttack();PL.atkCd=atkCd();}
+ if(PL.target&&PL.atkCd<=0&&P.atk<=0&&HASW()){P.atk=0.0001;P.atkHit=false;startAttack();PL.atkCd=atkCd();}
  if(PL.target&&!P.moving)P.tYaw=Math.atan2(PL.target.x-P.x,PL.target.z-P.z);
  if(P.atk>0){P.atk+=dt*ST_as()/curAtk().dur;{const ht=hitTimes();while(P.hitIdx<ht.length&&P.atk>=ht[P.hitIdx]){weapStrike(P.hitIdx);P.hitIdx++;}}if(P.atk>=1)P.atk=0;}
  updDrops(dt);updArrows(dt);updZones(dt);progTick(dt);updBossBar();
@@ -1831,7 +1856,7 @@ function drawOverlay(){oc.setTransform(dpr,0,0,dpr,0,0);oc.clearRect(0,0,W,H);if
  for(const Rg of MAP.regions){const cv=COV[Rg.r];if(cv>0.01){oc.fillStyle=`rgba(205,208,214,${0.92*cv})`;oc.fillRect(px(Rg.ox),pz(Rg.oz),N*sc,N*sc);}
   else{const lx=px(Rg.L.x+Rg.L.F/2),lz=pz(Rg.L.y+Rg.L.F/2);oc.fillStyle="#ffd35a";oc.strokeStyle="#3a2708";oc.lineWidth=1.5;oc.beginPath();oc.arc(lx,lz,4.5,0,7);oc.fill();oc.stroke();}}
  if(typeof SHR!=="undefined"&&SHR){const sx=px(SHR.x),sz=pz(SHR.z);oc.fillStyle="#9fe7ff";oc.strokeStyle="#0b3442";oc.lineWidth=1.5;oc.beginPath();oc.moveTo(sx,sz-5);oc.lineTo(sx+4,sz);oc.lineTo(sx,sz+5);oc.lineTo(sx-4,sz);oc.closePath();oc.fill();oc.stroke();}
- oc.fillStyle="#ff3b30";oc.strokeStyle="rgba(60,0,0,.8)";oc.lineWidth=1;for(const e of ENEMIES){if(e.state==="dead"||COV[e.r]>0.5)continue;const ex=px(e.x),ez=pz(e.z);if(ex<x0||ex>x0+S||ez<y0||ez>y0+S)continue;oc.beginPath();oc.arc(ex,ez,2.1,0,7);oc.fill();oc.stroke();}
+ oc.fillStyle="#ff3b30";oc.strokeStyle="rgba(60,0,0,.8)";oc.lineWidth=1;for(const e of ENEMIES){if(e.state==="dead"||COV[e.r]>0.5)continue;const ex=px(e.x),ez=pz(e.z);if(ex<x0||ex>x0+S||ez<y0||ez>y0+S)continue;if(e.tg||e.boss){oc.save();oc.fillStyle=e.tg?"#c77dff":"#ff7a2e";oc.strokeStyle="rgba(0,0,0,.8)";oc.lineWidth=1.5;oc.beginPath();oc.arc(ex,ez,4.2,0,7);oc.fill();oc.stroke();oc.restore();continue;}oc.beginPath();oc.arc(ex,ez,2.1,0,7);oc.fill();oc.stroke();}
  for(const p of MAP.passes){const gx=px(p.x),gz=pz(p.z);if(gx<x0-4||gx>x0+S+4||gz<y0-4||gz>y0+S+4)continue;oc.fillStyle=gateCol(p);oc.strokeStyle="rgba(0,0,0,.7)";oc.lineWidth=1.5;oc.beginPath();oc.arc(gx,gz,4,0,7);oc.fill();oc.stroke();}
  oc.restore();oc.lineWidth=2.5;oc.strokeStyle="rgba(255,255,255,.75)";oc.beginPath();oc.roundRect?oc.roundRect(x0,y0,S,S,12):oc.rect(x0,y0,S,S);oc.stroke();
  oc.save();oc.translate(px(P.x),pz(P.z));oc.rotate(-P.yaw+Math.PI);oc.fillStyle="#ffb02e";oc.strokeStyle="#4a2a00";oc.lineWidth=1.5;oc.beginPath();oc.moveTo(0,-7);oc.lineTo(5,5);oc.lineTo(0,2.5);oc.lineTo(-5,5);oc.closePath();oc.fill();oc.stroke();oc.restore();
@@ -1938,7 +1963,7 @@ renderInv=function(){if(invTab==="c")invTab="w";const tabs=[["w","Silahlar"],["t
   <p class="note">Tabletler dünyanın gizli köşelerine saklı. Her biri silahlarının bir üst kademeye geçmesinin kilidini açar.</p>`;
  const slots=[0,1,2,3].map(i=>i===0?`<div class="sl on" style="border-color:${col};box-shadow:inset 0 0 14px ${col}44">${wImg(EQ,WEAP.tier)}<small>${weapName()}</small></div>`:LV.l>=SLOT_LV[i]?`<div class="sl open"><small>Boş yuva</small></div>`
   :`<div class="sl"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#fff" stroke-width="2.2"><rect x="5" y="10" width="14" height="11" rx="2" fill="rgba(255,255,255,.2)"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg><small>Sv ${SLOT_LV[i]}</small></div>`).join("");
- const rows=[["Can",fmtHP(PL.hpMax)],["Can yenilenme",PL.regen+" / sn"],["Silah hasarı",weapDamage()],["Kritik şansı",EQ==="dagger"?"%25":"%15"],["Saldırı aralığı",atkCd().toFixed(2)+" sn"],["Menzil",curAtk().range+" m"],["Hız",SPEED.toFixed(1)],["Öldürülen düşman",CHEST.kills],["Keşfedilen bölge",DISC.filter(Boolean).length+" / 9"]];
+ const rows=[["Can",fmtHP(PL.hpMax)],["Can yenilenme",PL.regen+" / sn"],["Silah hasarı",weapDamage()],["Kritik şansı","%"+((EQ==="dagger"?25:15)+ST_crit()*100).toFixed(1)],["Saldırı aralığı",atkCd().toFixed(2)+" sn"],["Menzil",curAtk().range+" m"],["Hız",SPEED.toFixed(1)],["Öldürülen düşman",CHEST.kills],["Keşfedilen bölge",DISC.filter(Boolean).length+" / 9"]];
  const n=xpNeed(LV.l);
  invUI.innerHTML=`<div class="panel"><div class="hero"><div class="hd"><span>${PROF.nick}</span><i class="x">✕</i></div>
   <div class="view"><b class="info">!</b>${HERO.info?`<div class="stpop">${rows.map(r=>`<div><span>${r[0]}</span><b>${r[1]}</b></div>`).join("")}</div>`:""}</div>
@@ -2056,7 +2081,7 @@ function withW(k,f){const e=EQ,w=WEAP;EQ=k;WEAP=WSTATE[k];try{return f();}finall
 renderDet=function(){let d=invUI.querySelector(".det");if(!INV_DET){if(d)d.remove();return;}if(!d){d=document.createElement("div");d.className="det";invUI.appendChild(d);}
  const k=INV_DET,s=WSTATE[k],c=TIER_COL[s.tier],A=k==="staff"?STAFF_ATK[s.tier]:WATK[k],max=s.tier===6&&s.lvl>=100,cd=withW(k,()=>atkCd());
  const tiers=TIER_NAMES.map((nm,i)=>`<span style="background:${TIER_COL[i]};opacity:${i<=s.tier?1:0.28}" title="${nm}">${i+1}</span>`).join("");
- const rows=[["Hasar",weapDamage(k)],["Menzil",A.range+" m"],["Kritik şansı",k==="dagger"?"%25":"%15"],["Kritik hasarı","2×"],["Saldırı aralığı",cd.toFixed(2)+" sn"],["Silah seviyesi",s.lvl+(max?" (MAKS)":" / 100")]];
+ const rows=[["Hasar",weapDamage(k)],["Menzil",A.range+" m"],["Kritik şansı","%"+((k==="dagger"?25:15)+ST_crit()*100).toFixed(1)],["Kritik hasarı",ST_cm().toFixed(1)+"×"],["Saldırı aralığı",cd.toFixed(2)+" sn"],["Silah seviyesi",s.lvl+(max?" (MAKS)":" / 100")]];
  d.innerHTML=`<div class="dp" style="border-color:${c}"><i class="dx">✕</i><div class="dtop"><div class="pic" style="border-color:${c};box-shadow:0 0 16px ${c}66,inset 0 0 24px ${c}33">${wImg(k,s.tier,"big")}</div>
   <div class="dmeta"><div class="nm" style="color:${c}">${weapName(k)}</div><small>${TIER_NAMES[s.tier]} · Kademe ${s.tier+1}/7</small><div class="bar"><i style="width:${max?100:s.lvl}%;background:${c}"></i></div><div class="st">Sv ${s.lvl}${max?" · MAKS":" / 100"}</div>
   ${k===EQ?'<div class="eqtag">✓ Kuşanıldı</div>':""}</div></div>
@@ -2330,13 +2355,13 @@ function spawnGuardian(r){if(ENEMIES.some(e=>e.boss&&e.r===r))return;const p=MAP
  const types=REGION_EN[r],t=types.slice().sort((a,b)=>ETYPE[b].hp-ETYPE[a].hp)[0],T=ETYPE[t],mul=1+0.25*r;
  const e={t,r,camp:{x:gx,z:gz,field:null,id:-1},hx:gx,hz:gz,x:gx,z:gz,yaw:0,tYaw:0,spd:0,phase:0,hpMax:Math.round(T.hp*mul*45),hp:0,dmg:Math.round(T.dmg*(1+0.15*r)*3),
   state:"idle",cd:1,atk:0,hitDone:false,dead:0,respawn:0,flash:0,wander:99,wx:gx,wz:gz,seed:3,showHp:0,boss:true,sc:2.1,rise:1.2};e.hp=e.hpMax;ENEMIES.push(e);
- if(Math.hypot(P.x-gx,P.z-gz)<60)banner(THEMES[r].name+" Muhafızı uyandı!","Geçidin önünde seni bekliyor");}
+ if(Math.hypot(P.x-gx,P.z-gz)<60)banner(THEMES[r].name+" Muhafızı uyandı!","Bölgenin büyük tapınağında seni bekliyor");}
 function banner(a,b){toastEl.querySelector("b").textContent=a;toastEl.querySelector("span").textContent=b;toastEl.style.opacity=1;clearTimeout(enterRegion.t);enterRegion.t=setTimeout(()=>toastEl.style.opacity=0,2800);}
 function onKill(e){const r=e.r;PROG.kills[r]++;
  if(e.camp&&e.camp.id>=0&&!PROG.camps[r].includes(e.camp.id)&&ENEMIES.every(q=>q.camp!==e.camp||q.state==="dead"))PROG.camps[r].push(e.camp.id);
  if(e.elite){PROG.elite[r]++;e.respawn=90;
-  if(r>0&&!PROG.tab[r]&&Math.random()<0.4){PROG.parts[r]++;const tb=TABLETS[TAB_OF[r]];
-   if(PROG.parts[r]>=PARTS[r]){PROG.tab[r]=true;banner(tb.n+" Tableti tamamlandı!",tb.u+" kilidi açıldı");}else banner("Tablet parçası bulundu",tb.n+" Tableti "+PROG.parts[r]+"/"+PARTS[r]);
+  if(r>0&&!PROG.tab[r]&&Math.random()<0.2){PROG.parts[r]++;const tb=TABLETS[TAB_OF[r]];
+   if(PROG.parts[r]>=PARTS[r]){banner(tb.n+" Tableti'nin bekçisi uyandı!","Tableti almak için bekçiyi yen");setTimeout(()=>spawnTGuard(r),0);}else banner("Tablet parçası bulundu",tb.n+" Tableti "+PROG.parts[r]+"/"+PARTS[r]);
    FX.push({k:"pillar",x:e.x,y:0,z:e.z,t:0,life:0.9,r:0.8});}}
  if(e.boss){PROG.guard[r]=true;e.respawn=1e9;banner(THEMES[r].name+" Muhafızı yenildi!",LV.l>=LVREQ[r]?"Mühür çözülüyor…":"Geçit için Sv "+LVREQ[r]+" gerekli");
   FX.push({k:"ring",x:e.x,y:0.05,z:e.z,t:0,life:1,r0:0.5,r1:5,col:"255,214,110"});SHAKE=Math.max(SHAKE,0.4);}
@@ -2361,7 +2386,7 @@ function updQuestUI(){const r=CURR<0?0:CURR;qR=r;const th=THEMES[r];
  const qs=QDEF(r),done=qs.filter(q=>qProg(r,q)>=q.n).length;
  let h=`<div class="qh">📜 ${th.name} · Görevler ${done}/${qs.length} <i>${qOpen?"▾":"▸"}</i></div>`;
  if(qOpen){h+=qs.map(q=>{const v=qProg(r,q),ok=v>=q.n;return`<div class="ql ${ok?"ok":""}">${ok?"✓":"○"} ${q.n>1?fmtN(q.n)+" ":""}${q.t}${q.n>1&&!ok?` <b>${fmtN(v)}/${fmtN(q.n)}</b>`:""}</div>`;}).join("");
-  if(r>0){const tb=TABLETS[TAB_OF[r]];h+=`<div class="ql ${PROG.tab[r]?"ok":""}">${PROG.tab[r]?"✓":"○"} ${tb.n} Tableti <b>${Math.min(PROG.parts[r],PARTS[r])}/${PARTS[r]}</b></div>`;}
+  if(r>0){const tb=TABLETS[TAB_OF[r]];h+=`<div class="ql ${PROG.tab[r]?"ok":""}">${PROG.tab[r]?"✓":"○"} ${tb.n} Tableti <b>${PROG.parts[r]>=PARTS[r]&&!PROG.tab[r]?"bekçiyi yen":Math.min(PROG.parts[r],PARTS[r])+"/"+PARTS[r]}</b></div>`;}
   h+=`<div class="ql ${LV.l>=LVREQ[r]?"ok":""}">${LV.l>=LVREQ[r]?"✓":"○"} Seviye ${LVREQ[r]} <b>${Math.min(LV.l,LVREQ[r])}/${LVREQ[r]}</b></div>`;
   h+=`<div class="ql ${PROG.guard[r]?"ok":""}">${PROG.guard[r]?"✓":"○"} Muhafızı yen${!PROG.guard[r]&&!(questsDone(r)&&tabletDone(r))?" <b>uyuyor</b>":""}</div>`;}
  qEl.innerHTML=h;}
@@ -2386,11 +2411,11 @@ let drawGates=function(){const tt=performance.now()/1000;for(const p of MAP.pass
   oc.restore();}}
 // boss bar
 const bossEl=document.createElement("div");bossEl.id="bossbar";bossEl.innerHTML='<b></b><div><i></i></div>';document.body.appendChild(bossEl);
-function updBossBar(){let b=null;for(const e of ENEMIES)if(e.boss&&e.state!=="dead"&&Math.hypot(e.x-P.x,e.z-P.z)<16)b=e;
- if(!b||invOpen){bossEl.style.opacity=0;return;}bossEl.style.opacity=1;bossEl.querySelector("b").textContent=THEMES[b.r].name+" Muhafızı";bossEl.querySelector("i").style.width=(b.hp/b.hpMax*100)+"%";}
-function drawSpecials(){const tt=performance.now()/1000;for(const e of ENEMIES){if(!(e.elite||e.boss)||e.state==="dead")continue;const s=toScreen([e.x,0.05,e.z]);if(s[2]<0)continue;
-  const[,ppm]=ppmAt(e.x,0.05,e.z);const R=ppm*(e.boss?1.4:0.75);oc.save();oc.translate(s[0],s[1]);oc.scale(1,0.5);oc.globalCompositeOperation="lighter";
-  const c=e.boss?"255,80,50":"255,200,80";oc.strokeStyle=`rgba(${c},${0.55+0.3*Math.sin(tt*4)})`;oc.lineWidth=3;oc.beginPath();oc.arc(0,0,R,0,7);oc.stroke();
+function updBossBar(){let b=null;for(const e of ENEMIES)if((e.boss||e.tg)&&e.state!=="dead"&&Math.hypot(e.x-P.x,e.z-P.z)<16)b=e;
+ if(!b||invOpen){bossEl.style.opacity=0;return;}bossEl.style.opacity=1;bossEl.querySelector("b").textContent=b.tg?TABLETS[TAB_OF[b.r]].n+" Tableti Bekçisi":THEMES[b.r].name+" Muhafızı";bossEl.querySelector("i").style.width=(b.hp/b.hpMax*100)+"%";}
+function drawSpecials(){const tt=performance.now()/1000;for(const e of ENEMIES){if(!(e.elite||e.boss||e.tg)||e.state==="dead")continue;const s=toScreen([e.x,0.05,e.z]);if(s[2]<0)continue;
+  const[,ppm]=ppmAt(e.x,0.05,e.z);const R=ppm*(e.boss?1.4:e.tg?1.05:0.75);oc.save();oc.translate(s[0],s[1]);oc.scale(1,0.5);oc.globalCompositeOperation="lighter";
+  const c=e.boss?"255,80,50":e.tg?"200,120,255":"255,200,80";oc.strokeStyle=`rgba(${c},${0.55+0.3*Math.sin(tt*4)})`;oc.lineWidth=3;oc.beginPath();oc.arc(0,0,R,0,7);oc.stroke();
   const g=oc.createRadialGradient(0,0,0,0,0,R);g.addColorStop(0,`rgba(${c},.25)`);g.addColorStop(1,`rgba(${c},0)`);oc.fillStyle=g;oc.beginPath();oc.arc(0,0,R,0,7);oc.fill();oc.restore();
   if(e.elite){const h=toScreen([e.x,ETYPE[e.t].hpY*e.sc+0.25,e.z]);oc.fillStyle="#ffd35a";oc.font="900 13px system-ui";oc.textAlign="center";oc.strokeStyle="rgba(0,0,0,.7)";oc.lineWidth=3;oc.strokeText("★ Seçkin",h[0],h[1]);oc.fillText("★ Seçkin",h[0],h[1]);}}}
 
@@ -2736,7 +2761,7 @@ function m3WeapL(I,cfg,atkW){const m=I.m,G=I.G,pos=n=>{const i=SK.node(m,"mixamo
  const Y=a,dn=n[0]*Y[0]+n[1]*Y[1]+n[2]*Y[2];let Z=nrm([n[0]-Y[0]*dn,n[1]-Y[1]*dn,n[2]-Y[2]*dn]),X=[Y[1]*Z[2]-Y[2]*Z[1],Y[2]*Z[0]-Y[0]*Z[2],Y[0]*Z[1]-Y[1]*Z[0]];if(cfg.flip){X=X.map(v=>-v);Z=Z.map(v=>-v);}
  const s=cfg.s,sg=cfg.side==="Right"?-1:1,po=FIST.palm*sg,al=FIST.along,gc=[h[0]+(m1[0]-h[0])*al+n[0]*po,h[1]+(m1[1]-h[1])*al+n[1]*po,h[2]+(m1[2]-h[2])*al+n[2]*po];
  return[X[0]*s,X[1]*s,X[2]*s,0,Y[0]*s,Y[1]*s,Y[2]*s,0,Z[0]*s,Z[1]*s,Z[2]*s,0,gc[0]-Y[0]*s*cfg.gy,gc[1]-Y[1]*s*cfg.gy,gc[2]-Y[2]*s*cfg.gy,1];}
-function m3Weapon(Mh){const key="w/"+EQ+WEAP.tier,wm=SK.want(key);if(!wm)return;const cfg=M3.W[EQ];if(!cfg)return;
+function m3Weapon(Mh){if(!HASW())return;const key="w/"+EQ+WEAP.tier,wm=SK.want(key);if(!wm)return;const cfg=M3.W[EQ];if(!cfg)return;
  M3.wk+=((P.atk>0?1:0)-M3.wk)*Math.min(1,dtLast*14);const L=m3WeapL(M3.hero,cfg,M3.wk);if(!L)return;
  const Mw=M4.mul(Mh,L);SK.submitStatic(wm,Mw,P.flash>0?[2.2,1.3,1.2]:null);
  const tip=M4.xp(Mw,[0,0.5,0]);P.weapW=tip;if(EQ==="bow")P.bowW=M4.xp(Mw,[0,0,0]);}
@@ -2797,7 +2822,7 @@ weapStrike=(function(o){return function(i=0){o(i);if(i)return;const r=Math.rando
 
 // ---- gold ----
 const GOLD_MOB=[[30,35],[140,160],[650,750],[3000,3500],[14000,16000]],GOLD_BOSS=[3000,15000,70000,320000,1500000];
-function goldFor(e){const r=Math.min(4,Math.max(0,e.r|0));if(e.boss)return Math.round(GOLD_BOSS[r]*(0.95+Math.random()*0.1));
+function goldFor(e){const r=Math.min(4,Math.max(0,e.r|0));if(e.boss)return Math.round(GOLD_BOSS[r]*(0.95+Math.random()*0.1));if(e.tg)return Math.round((GOLD_MOB[r][0]+GOLD_MOB[r][1])*5);
  const[a,b]=GOLD_MOB[r];let g=a+Math.floor(Math.random()*(b-a+1));if(e.elite)g*=3;return g;}
 const topEl=document.getElementById("top"),goldEl=document.createElement("div");goldEl.id="gold";goldEl.innerHTML='<i class="cn"></i><b>0</b>';
 topEl.insertBefore(goldEl,document.getElementById("loc"));
@@ -2887,7 +2912,7 @@ const subT=(arr,cur,attr)=>arr.map(([k,n])=>`<b class="tb ${cur===k?"on":""}" da
 function renderPanel(k){
  if(k==="yet"){let body;
   if(YT==="soz"){let got=0;const list=TABLETS.map((tb,i)=>{const r=TAB_OF.indexOf(i),ok=r>0&&PROG.tab[r];if(ok)got++;const pa=r>0?Math.min(PROG.parts[r],PARTS[r]):0;
-    return`<div class="tbl ${ok?"ok":""}"><div class="tic">${ok?'<svg viewBox="0 0 24 24" fill="#ffd35a" stroke="#7a4a12" stroke-width="1.4"><path d="M6 3h12l1 18H5z"/><path d="M9 8h6M9 12h6M9 16h4" stroke="#7a4a12"/></svg>':LOCK}</div><div><b>${tb.n} Tableti</b><small>${tb.u}${i<6?" kilidini açar":""}${r>0&&!ok?` · Parça ${pa}/${PARTS[r]}`:""}</small></div></div>`;}).join("");
+    return`<div class="tbl ${ok?"ok":""}"><div class="tic">${ok?'<svg viewBox="0 0 24 24" fill="#ffd35a" stroke="#7a4a12" stroke-width="1.4"><path d="M6 3h12l1 18H5z"/><path d="M9 8h6M9 12h6M9 16h4" stroke="#7a4a12"/></svg>':LOCK}</div><div><b>${tb.n} Tableti</b><small>${tb.u}${i<6?" kilidini açar":""}${r>0&&!ok?(pa>=PARTS[r]?" · Bekçi seni bekliyor":` · Parça ${pa}/${PARTS[r]}`):""}</small></div></div>`;}).join("");
    body=`<div class="sec">Kutsal tabletler (${got}/7)</div><div class="tabs7">${list}</div><p class="note">Tabletler dünyanın gizli köşelerine saklı. Seçkin düşmanlardan parçaları toplanır; her biri silahlarının bir üst kademeye geçmesinin kilidini açar.</p>`;}
   else body=`<div class="sts">${STD.map(d=>`<div class="st" data-k="${d.k}"></div>`).join("")}</div><p class="note">Basılı tutarak hızlı geliştirebilirsin.</p>`;
   shell("yet","Yetenekler",subT([["soz","Sözler"],["ozl","Özellikler"]],YT,"y"),body);
@@ -2914,7 +2939,7 @@ function questHTML(){const r=CURR<0?0:CURR,th=THEMES[r];
  const row=(ok,t,p)=>`<div class="qd ${ok?"ok":""}"><span>${ok?"✓":"○"} ${t}</span>${p?`<b>${p}</b>`:""}</div>`;
  let h=`<div class="sec">${th.name} · Bölüm görevleri</div>`;
  for(const q of QDEF(r)){const v=qProg(r,q),ok=v>=q.n;h+=row(ok,(q.n>1?fmtN(q.n)+" ":"")+q.t,q.n>1?fmtN(v)+" / "+fmtN(q.n):"");}
- if(r>0){const tb=TABLETS[TAB_OF[r]];h+=row(PROG.tab[r],tb.n+" Tableti",Math.min(PROG.parts[r],PARTS[r])+" / "+PARTS[r]);}
+ if(r>0){const tb=TABLETS[TAB_OF[r]];h+=row(PROG.tab[r],tb.n+" Tableti",PROG.parts[r]>=PARTS[r]&&!PROG.tab[r]?"bekçiyi yen":Math.min(PROG.parts[r],PARTS[r])+" / "+PARTS[r]);}
  h+=row(LV.l>=LVREQ[r],"Seviye "+LVREQ[r],Math.min(LV.l,LVREQ[r])+" / "+LVREQ[r]);
  h+=row(PROG.guard[r],"Muhafızı yen",!PROG.guard[r]&&!(questsDone(r)&&tabletDone(r))?"uyuyor":"");
  return h+`<p class="note">Hepsini tamamla, muhafızı yen ve bir sonraki bölgenin geçidini aç.</p>`;}
@@ -2926,7 +2951,7 @@ function upStat(k){const d=STD.find(x=>x.k===k);if(STV[k]>=d.max)return false;co
  updGold();PAN.yet.querySelectorAll(".st").forEach(el=>{if(el.dataset.k===k){const v=el.querySelector(".vl span"),i=el.querySelector(".vl i"),s=el.querySelector(".nm small");v.textContent=d.v(STV[k]);i.style.width=STV[k]/d.max*100+"%";s.textContent="Sv "+STV[k]+" / "+d.max;}
   const dd=STD.find(x=>x.k===el.dataset.k),b=el.querySelector(".up"),mx=STV[dd.k]>=dd.max,cc=stCost(dd);b.className="up "+(mx?"mx":GOLD.g>=cc?"":"no");const sp=b.querySelector("span");if(mx)b.textContent="MAKS";else if(sp)sp.textContent=fmtN(cc);});
  return true;}
-function bindHold(btn,fn){let t=null,n=0;const stop=()=>{if(t){clearTimeout(t);t=null;}saveStats();saveGold();saveDaily();};
+function bindHold(btn,fn){let t=null,n=0;const stop=()=>{if(t){clearTimeout(t);t=null;}saveStats();saveGold();saveDaily();saveWeap();};
  const step=()=>{if(!fn()){stop();return;}n++;t=setTimeout(step,n<3?320:n<12?110:n<40?55:25);};
  btn.addEventListener("pointerdown",e=>{e.preventDefault();n=0;if(t)clearTimeout(t);try{btn.setPointerCapture(e.pointerId);}catch(_){}step();});
  btn.addEventListener("pointerup",stop);btn.addEventListener("pointercancel",stop);btn.addEventListener("lostpointercapture",stop);}
@@ -2934,6 +2959,95 @@ function updDot(){dbtn.querySelector(".dot").style.display=dailyBadge()?"block":
 setInterval(()=>{dailyCheck();if(!document.hidden&&!invOpen&&!modalOpen&&!window.__uip&&PL.dead<=0){DAILY.secs++;if(DAILY.secs%10===0)saveDaily();}updDot();
  if(UIP.k==="gor")PAN.gor.querySelector(".bd").innerHTML=questHTML();},1000);
 updDot();markTabs();
+// ================= v4: başlangıç sandığı, altınla silah geliştirme, tablet bekçileri =================
+function HASW(){return !!(CHEST&&CHEST.own&&CHEST.own[EQ]);}
+try{if(!localStorage.getItem("arin_start")){for(const k in CHEST.own)CHEST.own[k]=false;CHEST.n=0;saveChest();equip("staff");localStorage.setItem("arin_start","1");}}catch(e){}
+showTick=(function(o){return function(dt){if(!HASW()){P.atk=0;return;}return o(dt);};})(showTick);
+
+// ---- starter chest beside the altar ----
+const SORDER=["staff","hammer","dagger","bow"];
+const nextStarter=()=>SORDER.find(k=>!CHEST.own[k]);
+var SCH=null;
+const CHM=part(mb=>{const W=0.38,D=0.26,wood=[0.5,0.3,0.13],wd=[0.4,0.23,0.1],gold=[0.95,0.74,0.28],gd=[0.8,0.58,0.18];
+ mb.bbox(-W,0,-D,W,0.34,D,0.03,wood,wd,wd,2);
+ mb.bbox(-W-0.02,0.34,-D-0.02,W+0.02,0.52,D+0.02,0.06,[0.58,0.36,0.16],wood,wd,2);
+ for(const x of[-0.24,0.24])mb.box(x-0.04,0,-D-0.03,x+0.04,0.54,D+0.03,gold,gd);
+ mb.box(-W-0.03,0.3,-D-0.03,W+0.03,0.36,D+0.03,gold,gd);
+ mb.box(-0.06,0.2,D+0.03,0.06,0.36,D+0.07,gold,gold);});
+function chestSpot(){if(!SHR)return null;for(const[dx,dz]of[[2.6,1.2],[-2.6,1.2],[2.6,2.4],[0,3]]){const x=SHR.x+dx,z=SHR.z+dz;if(free(x,z))return{x,z};}return{x:SHR.x+2.6,z:SHR.z+1.2};}
+gateParts=(function(o){return function(){const r=o();if(SCH&&nextStarter()){const gy=groundY(SCH.x,SCH.z),t=performance.now()/1000,b=1+0.035*Math.sin(t*3);
+ r.push([CHM,M4.chain(M4.T(SCH.x,gy,SCH.z),M4.Ry(-0.6),M4.S(1.25*b,1.25*b,1.25*b))]);}return r;};})(gateParts);
+const sBtn=document.createElement("div");sBtn.id="sbtn";sBtn.textContent="Sandığı aç";document.body.appendChild(sBtn);
+const sArw=document.createElement("div");sArw.id="sarw";document.body.appendChild(sArw);
+const sRev=document.createElement("div");sRev.id="srev";document.body.appendChild(sRev);
+sBtn.addEventListener("pointerdown",e=>{e.stopPropagation();e.preventDefault();openStarter();});
+function openStarter(){const k=nextStarter();if(!k||!SCH)return;CHEST.own[k]=true;saveChest();
+ if(k==="staff"||!HASW())equip(k);
+ FX.push({k:"pillar",x:SCH.x,y:0,z:SCH.z,t:0,life:0.9,r:0.9});FX.push({k:"ring",x:SCH.x,y:0.05,z:SCH.z,t:0,life:0.8,r0:0.3,r1:3,col:"255,214,110"});
+ fxSparks(SCH.x,0.6,SCH.z,22,"255,205,70",5);vib(40);
+ const s=WSTATE[k],c=TIER_COL[s.tier],last=!nextStarter();
+ sRev.innerHTML=`<div class="rc" style="border-color:${c};box-shadow:0 0 30px ${c}66"><small>Yeni silah!</small><div class="pic">${wImg(k,s.tier,"big")}</div><b style="color:${c}">${weapName(k)}</b><span>${k===EQ?"Eline aldın":"Envantere eklendi"}</span>${last?"<em>Tüm silahlar senin! Kahraman menüsünden değiştirebilirsin.</em>":""}</div>`;
+ sRev.classList.remove("show");void sRev.offsetWidth;sRev.classList.add("show");clearTimeout(openStarter.t);openStarter.t=setTimeout(()=>sRev.classList.remove("show"),last?3600:2600);
+ if(last){FX.push({k:"ring",x:SCH.x,y:0.05,z:SCH.z,t:0,life:1.1,r0:0.5,r1:5,col:"255,214,110"});}}
+sRev.addEventListener("pointerdown",e=>{e.stopPropagation();sRev.classList.remove("show");});
+
+// ---- weapon upgrades with gold ----
+const wCost=(t,l)=>Math.round(50*Math.pow(5,t)*Math.pow(1.03,l-1));
+function upWeap(k){const s=WSTATE[k];if(s.tier===6&&s.lvl>=100)return 0;
+ if(s.lvl>=100){if(!PROG.tab[s.tier+1])return 0;const c=wCost(s.tier+1,1);if(GOLD.g<c)return 0;GOLD.g-=c;s.tier++;s.lvl=1;saveWeap();saveGold();updGold();if(k===EQ){updWeapUI();tierUpFX();showOff();}vib(60);return 2;}
+ const c=wCost(s.tier,s.lvl);if(GOLD.g<c)return 0;GOLD.g-=c;s.lvl++;if(k===EQ)updWeapUI();return 1;}
+function dmgNext(k){const s=WSTATE[k];s.lvl++;const d=weapDamage(k);s.lvl--;return d;}
+function fillWup(box,k){const s=WSTATE[k],l=box.querySelector(".wl"),b=box.querySelector(".wbtn"),sp=b.querySelector("span");let c=0;
+ if(s.tier===6&&s.lvl>=100){l.textContent="Silah en yüksek seviyede";b.className="wbtn mx";sp.textContent="MAKS";return;}
+ if(s.lvl>=100){if(!PROG.tab[s.tier+1]){l.innerHTML=`<b>${TABLETS[s.tier].n} Tableti</b> gerekli<br><small>${TIER_NAMES[s.tier+1]} kademesine geçmek için</small>`;b.className="wbtn lk";sp.textContent="Kilitli";return;}
+  c=wCost(s.tier+1,1);l.innerHTML=`Kademe atla<br><small>${TIER_NAMES[s.tier]} → <b>${TIER_NAMES[s.tier+1]}</b></small>`;}
+ else{c=wCost(s.tier,s.lvl);l.innerHTML=`Hasar <b>${fmtN(weapDamage(k))}</b> → <b class="nx">${fmtN(dmgNext(k))}</b><br><small>Basılı tutarak hızlı geliştir</small>`;}
+ b.className="wbtn"+(GOLD.g>=c?"":" no");sp.textContent=fmtN(c);}
+function refreshDet(d,k){const s=WSTATE[k],max=s.tier===6&&s.lvl>=100;const st=d.querySelector(".dmeta .st");if(st)st.textContent=`Sv ${s.lvl}${max?" · MAKS":" / 100"}`;
+ const bi=d.querySelector(".dmeta .bar i");if(bi)bi.style.width=(max?100:s.lvl)+"%";
+ const rows=d.querySelectorAll(".srows>div");rows.forEach(r=>{const n=r.querySelector("span").textContent,b=r.querySelector("b");if(n==="Hasar")b.textContent=weapDamage(k);else if(n==="Silah seviyesi")b.textContent=s.lvl+(max?" (MAKS)":" / 100");});}
+{const rD=renderDet;renderDet=function(){rD();const d=invUI.querySelector(".det");if(!d||!INV_DET)return;const k=INV_DET;
+ if(!/[?&]dbg/.test(location.search))d.querySelectorAll(".tst").forEach(x=>x.remove());
+ const go=d.querySelector(".go");if(!go)return;const box=document.createElement("div");box.className="wup";
+ box.innerHTML='<div class="wl"></div><b class="wbtn"><i class="cn"></i><span></span></b>';go.before(box);fillWup(box,k);
+ bindHold(box.querySelector(".wbtn"),()=>{const r=upWeap(k);if(r===1){refreshDet(d,k);fillWup(box,k);updGold();return true;}
+  if(r===2){setTimeout(()=>{renderInv();renderDet();},0);return false;}fillWup(box,k);return false;});};}
+// inventory: empty hand slot before the chest is opened
+{const rI2=renderInv;renderInv=function(){rI2();if(!HASW()){const sl=invUI.querySelector(".slots4 .sl.on");if(sl){sl.className="sl open";sl.removeAttribute("style");sl.innerHTML="<small>Boş el</small>";}}};}
+
+// ---- tablet keepers + guardian in the central temple ----
+const RSPOT={};
+function regSpots(r){if(RSPOT[r]!==undefined)return RSPOT[r];if(!MAP)return null;const g=MAP.regions.find(q=>q.r===r);if(!g){RSPOT[r]=null;return null;}
+ const inR=(x,z)=>x>=g.ox+1&&x<g.ox+N-1&&z>=g.oz+1&&z<g.oz+N-1,open=(x,z)=>walk(x,z)&&walk(x+1,z)&&walk(x-1,z)&&walk(x,z+1)&&walk(x,z-1);
+ let st=null;const sx=Math.floor(g.S.x),sz=Math.floor(g.S.y);
+ for(let rr=0;rr<12&&!st;rr++)for(let dz=-rr;dz<=rr&&!st;dz++)for(let dx=-rr;dx<=rr;dx++){const x=sx+dx,z=sz+dz;if(inR(x,z)&&open(x,z)){st=[x,z];break;}}
+ if(!st){RSPOT[r]=null;return null;}
+ const seen=new Uint8Array(N*N),q=[st];seen[(st[1]-g.oz)*N+st[0]-g.ox]=1;const lx=g.L.x+g.L.F/2,lz=g.L.y+g.L.F/2;let boss=null,bd=1e9,tg=null,td=-1;
+ for(let h=0;h<q.length;h++){const[x,z]=q[h];
+  if(open(x,z)){const dl=Math.hypot(x+0.5-lx,z+0.5-lz),ds=Math.hypot(x-sx,z-sz);if(dl<bd){bd=dl;boss={x:x+0.5,z:z+0.5};}const m=Math.min(dl,ds);if(m>td&&x>=g.ox+9&&x<g.ox+N-9&&z>=g.oz+9&&z<g.oz+N-9){td=m;tg={x:x+0.5,z:z+0.5};}}
+  for(const[ax,az]of[[1,0],[-1,0],[0,1],[0,-1]]){const nx=x+ax,nz=z+az;if(!inR(nx,nz))continue;const i=(nz-g.oz)*N+nx-g.ox;if(seen[i]||!walk(nx,nz))continue;seen[i]=1;q.push([nx,nz]);}}
+ RSPOT[r]={boss,tg};return RSPOT[r];}
+function spawnTGuard(r){if(!MAP||r<1||r>=ACTIVE_REGIONS||PROG.tab[r]||PROG.parts[r]<PARTS[r])return;if(ENEMIES.some(e=>e.tg&&e.r===r))return;const sp=regSpots(r);if(!sp||!sp.tg)return;
+ const gx=sp.tg.x,gz=sp.tg.z,types=REGION_EN[r],t=types.slice().sort((a,b)=>ETYPE[b].hp-ETYPE[a].hp)[0],T=ETYPE[t],mul=1+0.25*r;
+ const e={t,r,camp:{x:gx,z:gz,field:null,id:-1},hx:gx,hz:gz,x:gx,z:gz,yaw:0,tYaw:0,spd:0,phase:0,hpMax:Math.round(T.hp*mul*15),hp:0,dmg:Math.round(T.dmg*(1+0.15*r)*2.6),
+  state:"idle",cd:1,atk:0,hitDone:false,dead:0,respawn:0,flash:0,wander:99,wx:gx,wz:gz,seed:5,showHp:0,tg:true,sc:1.6};e.hp=e.hpMax;ENEMIES.push(e);}
+{const oSG=spawnGuardian;spawnGuardian=function(r){if(ENEMIES.some(e=>e.boss&&e.r===r))return;const n0=ENEMIES.length;oSG(r);const sp=regSpots(r);
+ if(ENEMIES.length>n0&&sp&&sp.boss){const e=ENEMIES[ENEMIES.length-1];if(e.boss){e.x=e.hx=e.wx=e.camp.x=sp.boss.x;e.z=e.hz=e.wz=e.camp.z=sp.boss.z;}}};}
+onKill=(function(o){return function(e){o(e);if(e.tg){const r=e.r;e.respawn=1e9;PROG.tab[r]=true;const tb=TABLETS[TAB_OF[r]];banner(tb.n+" Tableti senin!",tb.u+" kilidi açıldı");
+ FX.push({k:"pillar",x:e.x,y:0,z:e.z,t:0,life:1.1,r:1.2});SHAKE=Math.max(SHAKE,0.3);vib(70);checkProgress();saveProg();}};})(onKill);
+
+// ---- per-frame: chest prompt, guide arrow, keeper spawns ----
+let s4T=0,s4Hint=false;
+function s4Tick(){requestAnimationFrame(s4Tick);
+ if(!SCH&&SHR&&MAP)SCH=chestSpot();
+ const nx=nextStarter(),busyUI=invOpen||modalOpen||window.__uip||mapOpen;
+ const near=SCH&&nx&&Math.hypot(P.x-SCH.x,P.z-SCH.z)<2.4;sBtn.classList.toggle("show",!!near&&!busyUI&&PL.dead<=0);
+ if(SCH&&nx&&!busyUI&&VP){const p=toScreen([SCH.x,(near?2.1:1.7),SCH.z]);if(p[2]>0){const x=Math.max(20,Math.min(W-20,p[0])),y=Math.max(70,Math.min(H-130,p[1]));sArw.style.transform=`translate(${x}px,${y}px)`;sArw.classList.add("show");}else sArw.classList.remove("show");}
+ else sArw.classList.remove("show");
+ if(SCH&&!CHEST.own.staff&&!s4Hint&&performance.now()>4000){s4Hint=true;banner("Sunağın yanındaki sandığı aç","Silahın seni orada bekliyor");}
+ const t=performance.now();if(t-s4T>2000){s4T=t;for(let r=1;r<ACTIVE_REGIONS;r++)spawnTGuard(r);}}
+requestAnimationFrame(s4Tick);
+if(window.__d3)Object.defineProperties(window.__d3,{CH:{get:()=>CHEST},EQN:{get:()=>EQ},PROG:{get:()=>PROG},WS:{get:()=>WSTATE},inv:{get:()=>invOpen},SG:{get:()=>spawnGuardian},RS:{get:()=>regSpots},MAPR:{get:()=>MAP.regions}});
 window.__dbg={get E(){return ENEMIES;},P,get MAP(){return MAP;},get CURR(){return CURR;}};
 }
 </script>
