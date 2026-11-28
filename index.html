@@ -3179,7 +3179,8 @@ fxEnemyStrike=(function(o){return function(e){o(e);if(e.boss||e.tg){SHAKE=Math.m
 window.TEST_MODE=true;
 if(window.TEST_MODE){
  gainXP=(function(o){return function(n,e){return o(e&&!e.boss&&!e.tg?100000:n,e);};})(gainXP);
- goldFor=(function(o){return function(e){return !e.boss&&!e.tg?1000000:o(e);};})(goldFor);}
+ goldFor=(function(o){return function(e){return !e.boss&&!e.tg?1000000:o(e);};})(goldFor);
+ onKill=(function(o){return function(e){o(e);if(!e.boss&&!e.tg)e.respawn=5;};})(onKill);}
 // boss bar sits just under the top HUD so it never covers the quest box
 setInterval(()=>{const b=topEl.getBoundingClientRect().bottom;bossEl.style.top=Math.round(b+10)+"px";},300);
 window.__dbg={get E(){return ENEMIES;},P,get MAP(){return MAP;},get CURR(){return CURR;}};
