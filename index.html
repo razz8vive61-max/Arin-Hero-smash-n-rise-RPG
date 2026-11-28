@@ -2383,7 +2383,7 @@ function banner(a,b){toastEl.querySelector("b").textContent=a;toastEl.querySelec
 function onKill(e){const r=e.r;PROG.kills[r]++;
  if(e.camp&&e.camp.id>=0&&!PROG.camps[r].includes(e.camp.id)&&ENEMIES.every(q=>q.camp!==e.camp||q.state==="dead"))PROG.camps[r].push(e.camp.id);
  if(e.elite){PROG.elite[r]++;e.respawn=90;
-  if(r>0&&!PROG.tab[r]&&Math.random()<0.2){PROG.parts[r]++;const tb=TABLETS[TAB_OF[r]];
+  if(r>0&&!PROG.tab[r]&&Math.random()<(window.TEST_MODE?1:0.2)){PROG.parts[r]++;const tb=TABLETS[TAB_OF[r]];
    if(PROG.parts[r]>=PARTS[r]){banner(tb.n+" Tableti'nin bekçisi uyandı!","Tableti almak için bekçiyi yen");setTimeout(()=>spawnTGuard(r),0);}else banner("Tablet parçası bulundu",tb.n+" Tableti "+PROG.parts[r]+"/"+PARTS[r]);
    FX.push({k:"pillar",x:e.x,y:0,z:e.z,t:0,life:0.9,r:0.8});}}
  if(e.boss){PROG.guard[r]=true;e.respawn=1e9;banner(THEMES[r].name+" Muhafızı yenildi!",LV.l>=LVREQ[r]?"Mühür çözülüyor…":"Geçit için Sv "+LVREQ[r]+" gerekli");
@@ -3175,6 +3175,11 @@ function bossFX(dt){embT+=dt;if(embT<0.12)return;embT=0;
   if(e.atk>0&&e.atk<0.6&&Math.random()<0.5)fxSparks(e.x,1.2*sc*0.5,e.z,3,col,3);}}
 fxEnemyStrike=(function(o){return function(e){o(e);if(e.boss||e.tg){SHAKE=Math.max(SHAKE,0.28);FX.push({k:"ring",x:e.x,y:0.05,z:e.z,t:0,life:0.55,r0:0.4,r1:2.4*(e.sc||2)/2,col:e.boss?"255,110,60":"200,130,255"});}};})(fxEnemyStrike);
 {let lt=performance.now();(function bt(){requestAnimationFrame(bt);const t=performance.now(),dt=Math.min(0.05,(t-lt)/1000);lt=t;if(!window.__uip&&!invOpen&&!modalOpen&&MAP)bossFX(dt);})();}
+// ---- TEST MODU: deneme için yüksek ödüller. Yayından önce false yapılacak ----
+window.TEST_MODE=true;
+if(window.TEST_MODE){
+ gainXP=(function(o){return function(n,e){return o(e&&!e.boss&&!e.tg?100000:n,e);};})(gainXP);
+ goldFor=(function(o){return function(e){return !e.boss&&!e.tg?1000000:o(e);};})(goldFor);}
 // boss bar sits just under the top HUD so it never covers the quest box
 setInterval(()=>{const b=topEl.getBoundingClientRect().bottom;bossEl.style.top=Math.round(b+10)+"px";},300);
 window.__dbg={get E(){return ENEMIES;},P,get MAP(){return MAP;},get CURR(){return CURR;}};
