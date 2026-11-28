@@ -932,7 +932,7 @@ const PT={
  beam:part(mb=>{mb.smooth=false;mb.cyl(0,0,0,0.9,1.6,40,12,hex("#ffd36e"),false,1);})
 };
 const P={x:0,z:0,yaw:0,tYaw:0,phase:0,spd:0,moving:false};
-const SPEED=3.0;
+const SPEED=4.0;
 function characterParts(){
  const amt=Math.min(1,P.spd/SPEED),ph=P.phase,out=[];
  const bob=P.moving?(Math.abs(Math.cos(ph))*0.035-0.022)*amt:0;
@@ -1845,7 +1845,7 @@ function update(dt){const lock=busy||mapOpen||PL.dead>0;let ix=lock?0:joy.ix,iy=
  P.yaw+=angD(P.tYaw,P.yaw)*Math.min(1,dt*10);
  if(P.moving){const dx=Math.sin(P.yaw)*P.spd*dt,dz=Math.cos(P.yaw)*P.spd*dt;if(free(P.x+dx,P.z))P.x+=dx;if(free(P.x,P.z+dz))P.z+=dz;P.phase+=dt*P.spd/0.78*Math.PI;}
  else P.phase+=(Math.round(P.phase/Math.PI)*Math.PI-P.phase)*Math.min(1,dt*8);
- cam.x+=(P.x-cam.x)*Math.min(1,dt*6);cam.z+=(P.z-cam.z)*Math.min(1,dt*6);
+ cam.x+=(P.x-cam.x)*Math.min(1,dt*13);cam.z+=(P.z-cam.z)*Math.min(1,dt*13);
  updRegion(dt);streamChunks(1);updCombat(dt);
  updParts(dt);}
 
